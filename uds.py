@@ -11,6 +11,7 @@ import math
 import urllib.request
 import ntpath
 import io
+import os
 
 class UDSFile(object):
     base64 = ""
@@ -141,16 +142,31 @@ def build_file(parent_id,service):
             encoded_part = reassemble_part(item['id'], service)
             encoded_parts = encoded_parts + encoded_part
             
+        # Change string so it works with base64decode
         encoded_parts = encoded_parts.replace("b\"\\xef\\xbb\\xbfb'","")
+        encoded_parts = encoded_parts.replace("b'\\xef\\xbb\\xbf","")
         encoded_parts = encoded_parts.replace("'\"","")
+        encoded_parts = encoded_parts.replace("'","")
+        
+        
 
-        print(encoded_parts)
+        t = open("%s.download" % folder['name'],"w+")
+        t.write(encoded_parts)
+        t.close()
 
         decoded_part = base64.b64decode(encoded_parts)
 
         f = open("%s" % folder['name'],"wb")
         f.write(decoded_part)
-        f.close()        
+        f.close()  
+
+        # Tidy up temp files
+        try:
+             os.remove("%s.download" % folder['name'])   
+        except OSError as e: 
+            print ("Failed with: %s" % e.strerror)
+            print ("Error code: %s" % e.code)
+          
             
 
 def reassemble_part(part_id, service):
