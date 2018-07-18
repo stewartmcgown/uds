@@ -59,7 +59,7 @@ def do_upload(path, service):
 
     with open(path, "rb") as f:
         data = f.read()
-        enc = str(base64.b64encode(data))
+        enc = base64.b64encode(data).decode()
 
         mime = MimeTypes()
         url = urllib.request.pathname2url(path) 
@@ -141,6 +141,11 @@ def build_file(parent_id,service):
             encoded_part = reassemble_part(item['id'], service)
             encoded_parts = encoded_parts + encoded_part
             
+        encoded_parts = encoded_parts.replace("b\"\\xef\\xbb\\xbfb'","")
+        encoded_parts = encoded_parts.replace("'\"","")
+
+        print(encoded_parts)
+
         decoded_part = base64.b64decode(encoded_parts)
 
         f = open("%s" % folder['name'],"wb")
