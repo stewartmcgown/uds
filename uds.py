@@ -11,7 +11,6 @@ import math
 import urllib.request
 import ntpath
 import io
-import os
 
 class UDSFile(object):
     base64 = ""
@@ -60,7 +59,7 @@ def do_upload(path, service):
 
     with open(path, "rb") as f:
         data = f.read()
-        enc = base64.b64encode(data).decode()
+        enc = str(base64.b64encode(data))
 
         mime = MimeTypes()
         url = urllib.request.pathname2url(path) 
@@ -135,26 +134,28 @@ def build_file(parent_id,service):
         print('Parts of %s:' % folder['name'])
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
-        encoded_file = open(folder['name'],"w")
+        encoded_parts = ""
 
         for i,item in enumerate(items):
             print('%s (%s)' % (item['properties']['part'], item['id']))
-            encoded_part_name = reassemble_part(item['id'],i,parent_id, service)
-            encoded_file.write(base64.b64decode(open(encoded_part_name).read()))
+            encoded_part = reassemble_part(item['id'], service)
+            encoded_parts = encoded_parts + encoded_part
+            
+        decoded_part = base64.b64decode(encoded_parts)
 
-
-        encoded_file.close()
+        f = open("%s" % folder['name'],"wb")
+        f.write(decoded_part)
+        f.close()        
             
 
-def reassemble_part(part_id, part_no, parent_id, service):
+def reassemble_part(part_id, service):
     request = service.files().export_media(fileId=part_id, mimeType='text/plain')
-    filename = "%s.%s" % (part_id,part_no)
-    fh = io.FileIO(filename,"wb")
+    fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while done is False:
         status, done = downloader.next_chunk()
-    return filename
+    return str(fh.getvalue())
 
 def list_files(service):
     # Call the Drive v3 API
