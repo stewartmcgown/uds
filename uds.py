@@ -13,6 +13,8 @@ import ntpath
 import io
 import os
 
+DOWNLOADS_FOLDER = "downloads"
+
 class UDSFile(object):
     base64 = ""
     mime = ""
@@ -61,6 +63,9 @@ def do_upload(path, service):
     with open(path, "rb") as f:
         data = f.read()
         enc = base64.b64encode(data).decode()
+
+        enc = enc.replace("b'","")
+        enc = enc.replace("'","")
 
         mime = MimeTypes()
         url = urllib.request.pathname2url(path) 
@@ -111,6 +116,8 @@ def do_upload(path, service):
     
     progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
 
+    os.remove(".uds")
+
 def build_file(parent_id,service):
     # This will fetch the Docs one by one, concatting them 
     # to a local base64 file. The file will then be converted 
@@ -132,37 +139,41 @@ def build_file(parent_id,service):
         for item in items:
             item['properties']['part'] = int(item['properties']['part'])
    
-        print('Parts of %s:' % folder['name'])
+        #print('Parts of %s:' % folder['name'])
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
         encoded_parts = ""
 
         for i,item in enumerate(items):
-            print('%s (%s)' % (item['properties']['part'], item['id']))
+            #print('%s (%s)' % (item['properties']['part'], item['id']))
+            progressBar("Downloading %s" % folder['name'],i,len(items))
             encoded_part = reassemble_part(item['id'], service)
             encoded_parts = encoded_parts + encoded_part
-            
-        # Change string so it works with base64decode
+        
+        progressBar("Downloaded %s" % folder['name'],1,1)
+
+        # Change string so it works with base64decode (legacy at this point)
         encoded_parts = encoded_parts.replace("b\"\\xef\\xbb\\xbfb'","")
         encoded_parts = encoded_parts.replace("b'\\xef\\xbb\\xbf","")
         encoded_parts = encoded_parts.replace("'\"","")
         encoded_parts = encoded_parts.replace("'","")
         
-        
+        if not os.path.exists(DOWNLOADS_FOLDER):
+            os.makedirs(DOWNLOADS_FOLDER)
 
-        t = open("%s.download" % folder['name'],"w+")
+        t = open("%s/%s.download" % (DOWNLOADS_FOLDER,folder['name']),"w+")
         t.write(encoded_parts)
         t.close()
 
         decoded_part = base64.b64decode(encoded_parts)
 
-        f = open("%s" % folder['name'],"wb")
+        f = open("%s/%s" % (DOWNLOADS_FOLDER,folder['name']),"wb")
         f.write(decoded_part)
         f.close()  
 
         # Tidy up temp files
         try:
-             os.remove("%s.download" % folder['name'])   
+             os.remove("%s/%s.download" % (DOWNLOADS_FOLDER,folder['name']))   
         except OSError as e: 
             print ("Failed with: %s" % e.strerror)
             print ("Error code: %s" % e.code)
