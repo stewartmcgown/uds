@@ -1,11 +1,13 @@
 from __future__ import print_function
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
 from httplib2 import Http
 from oauth2client import file, client, tools
 from mimetypes import MimeTypes
 from tabulate import tabulate
+from io import StringIO
 import sys
 import base64
 import math
@@ -14,7 +16,7 @@ import ntpath
 import io
 import os
 import time
-
+import shutil
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
 
@@ -133,6 +135,7 @@ def do_upload(path, service):
     media = UDSFile()
 
     with open(path, "rb") as f:
+        
         data = f.read()
         enc = base64.b64encode(data).decode()
 
@@ -157,7 +160,7 @@ def do_upload(path, service):
     length = len(media.base64)
     no_docs = math.ceil(length / MAX_LENGTH)
 
-    print("%s will required %s Docs to store." % (media.name, no_docs))
+    print("%s requires %s Docs to store." % (media.name, no_docs))
 
     # Creat folder ID
     parent = create_folder(media, service)
@@ -169,14 +172,6 @@ def do_upload(path, service):
         progressBar("Uploading %s" % media.name,i,no_docs)
 
         current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
-
-        # Create the temp file
-        if not os.path.exists(TEMP_FOLDER):
-            os.makedirs(TEMP_FOLDER)
-
-        f = open("%s/%s%s" % (TEMP_FOLDER, media.name, str(i)),"w+")
-        f.write(current_substr)
-        f.close()
         
         file_metadata = {
             'name': media.name + str(i),
@@ -187,19 +182,16 @@ def do_upload(path, service):
             }
         }
 
-        media_file = MediaFileUpload('.uds',
+        media_file = MediaIoBaseUpload(io.StringIO(current_substr),
                         mimetype='text/plain')
         
         file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
                                     fields='id').execute()
-    
+
     progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
 
-    try:
-        os.remove(".uds") 
-    except OSError as e: 
-        print ("\nUnable to clear temporary files.")
+    
 
 def build_file(parent_id,service):
     # This will fetch the Docs one by one, concatting them 
