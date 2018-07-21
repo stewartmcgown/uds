@@ -9,7 +9,7 @@ UDS is a tool to split files into base64 parts small enough to fit inside a Goog
 ### Logic
   - Size of the encoded file is always larger than the original. Base64 encodes binary data to a ratio of about 4:3. 
   - A single google doc can store about a million characters. This is around 710KB of base64 encoded data.
-  - Uploads are multithreaded now, as they reduce upload time by a factor of two.
+  - Some experiments with multithreading the uploads, but there was no significant performance increase. 
 
 #### Upload
 ```sh

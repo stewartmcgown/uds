@@ -61,6 +61,11 @@ def byte_format(bytes):
 
     return str(bytes) + ' ' + unit
 
+def get_downloads_folder():
+    if not os.path.exists(DOWNLOADS_FOLDER):
+            os.makedirs(DOWNLOADS_FOLDER)
+    return DOWNLOADS_FOLDER
+
 def get_base_folder(service):
     # Look for existing folder
     results = service.files().list(
@@ -70,7 +75,7 @@ def get_base_folder(service):
     folders = results.get('files', [])
     
     if len(folders) == 0:
-        return create_generic_folder("UDS Root", service, {'udsRoot':'true'})
+        return create_root_folder("UDS Root", service, {'udsRoot':'true'})
     elif len(folders) == 1:
         return folders[0]
     else:
@@ -127,19 +132,22 @@ def create_folder(media, service):
 
     return file
 
-def create_generic_folder(name, service, properties={}):
-    properties['size'] = size
-
+def create_root_folder(name, service, properties={}):
     file_metadata = {
         'name': name,
         'mimeType': 'application/vnd.google-apps.folder',
         'properties': properties,
+        'parents': []
     }
 
-    file = service.files().create(body=file_metadata,
+    root_folder = service.files().create(body=file_metadata,
                                         fields='id').execute()
 
-    return file
+    # Hide this folder
+    service.files().update(fileId=root_folder['id'],
+                                    removeParents='root').execute()
+
+    return root_folder
 
 def upload_file_to_drive(media_file, file_metadata, service=None):
     if service == None:
@@ -147,8 +155,8 @@ def upload_file_to_drive(media_file, file_metadata, service=None):
     file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
                                     fields='id').execute()
-    print("Part %s uploaded." % file_metadata['properties']['part'])
-    return file, int(file_metadata['properties']['part'])
+
+    return file
 
 def do_upload(path, service):
     media = UDSFile()
@@ -186,45 +194,15 @@ def do_upload(path, service):
     print("Created parent folder with ID %s" % (parent['id']))
 
     parent_id = parent['id']
-
-    media_file_list = list()
-    file_metadata_list = list()
-
-    for i in range(no_docs):
-
-        current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
-
-        file_metadata = {
-            'name': media.name + str(i),
-            'mimeType': 'application/vnd.google-apps.document',
-            'parents': [parent_id],
-            'properties': {
-                'part': str(i)
-            }
-        }
-
-        file_metadata_list.append(file_metadata)
-
-        media_file = MediaIoBaseUpload(io.StringIO(current_substr),
-                        mimetype='text/plain')
-        
-        media_file_list.append(media_file)
     
-
-    # Free up some memory
-    media.base64 = None
-
-    t = time.time()    
-
-    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+    """with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
         for file,part in executor.map(upload_file_to_drive, media_file_list, file_metadata_list):
             #progressBar("Uploading %s" % media.name,count,no_docs)
             #count += 1
             # This will order things correctly
-            print(file['id']) 
-    t = time.time() - t
+            print(file['id']) """
 
-    """for i in range(no_docs):
+    for i in range(no_docs):
         progressBar("Uploading %s" % media.name,i,no_docs)
 
         current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
@@ -243,13 +221,9 @@ def do_upload(path, service):
 
         file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
-                                    fields='id').execute()"""
+                                    fields='id').execute()    
         
-    
-        
-
-    #progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
-    print("Uploaded in %s" % t)
+    progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
 
     
 
@@ -294,22 +268,21 @@ def build_file(parent_id,service):
         encoded_parts = encoded_parts.replace("'\"","")
         encoded_parts = encoded_parts.replace("'","")
         
-        if not os.path.exists(DOWNLOADS_FOLDER):
-            os.makedirs(DOWNLOADS_FOLDER)
+        
 
-        t = open("%s/%s.download" % (DOWNLOADS_FOLDER,folder['name']),"w+")
+        t = open("%s/%s.download" % (get_downloads_folder(),folder['name']),"w+")
         t.write(encoded_parts)
         t.close()
 
         decoded_part = base64.b64decode(encoded_parts)
 
-        f = open("%s/%s" % (DOWNLOADS_FOLDER,folder['name']),"wb")
+        f = open("%s/%s" % (get_downloads_folder(),folder['name']),"wb")
         f.write(decoded_part)
         f.close()  
 
         # Tidy up temp files
         try:
-             os.remove("%s/%s.download" % (DOWNLOADS_FOLDER,folder['name']))   
+             os.remove("%s/%s.download" % (get_downloads_folder(),folder['name']))   
         except OSError as e: 
             print ("Failed with: %s" % e.strerror)
             print ("Error code: %s" % e.code)
@@ -324,6 +297,30 @@ def reassemble_part(part_id, service):
     while done is False:
         status, done = downloader.next_chunk()
     return str(fh.getvalue())
+
+def convert_file(file_id, service):
+    # Get file metadata
+    metadata = service.files().get(fileId=file_id, fields="name").execute()
+
+    # Download the file and then call do_upload() on it
+    request = service.files().get_media(fileId=file_id)
+    path = f"{get_downloads_folder()}/{metadata['name']}"
+    fh = io.FileIO(path, "wb")
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+    
+    print("Downloaded %s" % metadata['name'])
+    do_upload(path, service)
+
+    
+
+
+
+    # An alternative method would be to use partial download headers
+    # and convert and upload the parts individually. Perhaps a 
+    # future release will implement this.
 
 def list_files(service):
     # Call the Drive v3 API
@@ -347,7 +344,7 @@ def list_files(service):
 
 def main():
     # Setup the Drive v3 API
-    SCOPES = 'https://www.googleapis.com/auth/drive'
+    SCOPES = ['https://www.googleapis.com/auth/drive']
     store = file.Storage('credentials.json')
     creds = store.get()
     if not creds or creds.invalid:
@@ -363,7 +360,7 @@ def main():
     options = """
     push     Uploads a file from this computer [path_to_file]
     pull     Downloads a UDS file [id]
-    list     Finds all UDS files 
+    list     Finds all UDS files
     delete   Deletes a UDS file [id]
     """
 
@@ -375,6 +372,8 @@ def main():
             build_file(sys.argv[2], service)
         elif command == "list":
             list_files(service)
+        elif command == "convert":
+            convert_file(sys.argv[2], service)
         else:
             print(options)
     else:
