@@ -17,6 +17,8 @@ import io
 import os
 import time
 import shutil
+import concurrent.futures
+
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
 
@@ -29,35 +31,35 @@ class UDSFile(object):
     size = 0
     encoded_size = 0
 
-def byte_format(number_of_bytes):
-    if number_of_bytes < 0:
+def byte_format(bytes):
+    if bytes < 0:
         raise ValueError("!!! number_of_bytes can't be smaller than 0 !!!")
 
-    step_to_greater_unit = 1024.
+    step = 1024.
 
-    number_of_bytes = float(number_of_bytes)
+    bytes = float(bytes)
     unit = 'bytes'
 
-    if (number_of_bytes / step_to_greater_unit) >= 1:
-        number_of_bytes /= step_to_greater_unit
+    if (bytes / step) >= 1:
+        bytes /= step
         unit = 'KB'
 
-    if (number_of_bytes / step_to_greater_unit) >= 1:
-        number_of_bytes /= step_to_greater_unit
+    if (bytes / step) >= 1:
+        bytes /= step
         unit = 'MB'
 
-    if (number_of_bytes / step_to_greater_unit) >= 1:
-        number_of_bytes /= step_to_greater_unit
+    if (bytes / step) >= 1:
+        bytes /= step
         unit = 'GB'
 
-    if (number_of_bytes / step_to_greater_unit) >= 1:
-        number_of_bytes /= step_to_greater_unit
+    if (bytes / step) >= 1:
+        bytes /= step
         unit = 'TB'
 
     precision = 1
-    number_of_bytes = round(number_of_bytes, precision)
+    bytes = round(bytes, precision)
 
-    return str(number_of_bytes) + ' ' + unit
+    return str(bytes) + ' ' + unit
 
 def get_base_folder(service):
     # Look for existing folder
@@ -82,6 +84,15 @@ def progressBar(title, value, endvalue, bar_length=30):
 
         sys.stdout.write("\r"+title+": [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
         sys.stdout.flush()
+
+def get_service():
+    SCOPES = 'https://www.googleapis.com/auth/drive'
+    store = file.Storage('credentials.json')
+    creds = store.get()
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets('client_secret.json', SCOPES)
+        creds = tools.run_flow(flow, store)
+    return build('drive', 'v3', http=creds.authorize(Http()))
 
 def assign_property(id):
     body = {
@@ -130,6 +141,14 @@ def create_generic_folder(name, service, properties={}):
 
     return file
 
+def upload_file_to_drive(media_file, file_metadata, service=None):
+    if service == None:
+        service = get_service()
+    file = service.files().create(body=file_metadata, 
+                                    media_body=media_file,
+                                    fields='id').execute()
+    print("Part %s uploaded." % file_metadata['properties']['part'])
+    return file, int(file_metadata['properties']['part'])
 
 def do_upload(path, service):
     media = UDSFile()
@@ -168,11 +187,48 @@ def do_upload(path, service):
 
     parent_id = parent['id']
 
+    media_file_list = list()
+    file_metadata_list = list()
+
     for i in range(no_docs):
+
+        current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
+
+        file_metadata = {
+            'name': media.name + str(i),
+            'mimeType': 'application/vnd.google-apps.document',
+            'parents': [parent_id],
+            'properties': {
+                'part': str(i)
+            }
+        }
+
+        file_metadata_list.append(file_metadata)
+
+        media_file = MediaIoBaseUpload(io.StringIO(current_substr),
+                        mimetype='text/plain')
+        
+        media_file_list.append(media_file)
+    
+
+    # Free up some memory
+    media.base64 = None
+
+    t = time.time()    
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+        for file,part in executor.map(upload_file_to_drive, media_file_list, file_metadata_list):
+            #progressBar("Uploading %s" % media.name,count,no_docs)
+            #count += 1
+            # This will order things correctly
+            print(file['id']) 
+    t = time.time() - t
+
+    """for i in range(no_docs):
         progressBar("Uploading %s" % media.name,i,no_docs)
 
         current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
-        
+
         file_metadata = {
             'name': media.name + str(i),
             'mimeType': 'application/vnd.google-apps.document',
@@ -184,12 +240,16 @@ def do_upload(path, service):
 
         media_file = MediaIoBaseUpload(io.StringIO(current_substr),
                         mimetype='text/plain')
-        
+
         file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
-                                    fields='id').execute()
+                                    fields='id').execute()"""
+        
+    
+        
 
-    progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
+    #progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
+    print("Uploaded in %s" % t)
 
     
 
@@ -285,32 +345,41 @@ def list_files(service):
 
         print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID']))
 
+def main():
+    # Setup the Drive v3 API
+    SCOPES = 'https://www.googleapis.com/auth/drive'
+    store = file.Storage('credentials.json')
+    creds = store.get()
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets('client_secret.json', SCOPES)
+        creds = tools.run_flow(flow, store)
+    service = build('drive', 'v3', http=creds.authorize(Http()))
 
-# Setup the Drive v3 API
-SCOPES = 'https://www.googleapis.com/auth/drive'
-store = file.Storage('credentials.json')
-creds = store.get()
-if not creds or creds.invalid:
-    flow = client.flow_from_clientsecrets('client_secret.json', SCOPES)
-    creds = tools.run_flow(flow, store)
-service = build('drive', 'v3', http=creds.authorize(Http()))
+    # Initial look for folder and first time setup if not
+    uds_root = get_base_folder(service)
+    BASE_FOLDER = uds_root
 
-# Initial look for folder and first time setup if not
-uds_root = get_base_folder(service)
-BASE_FOLDER = uds_root
+    # Options
+    options = """
+    push     Uploads a file from this computer [path_to_file]
+    pull     Downloads a UDS file [id]
+    list     Finds all UDS files 
+    delete   Deletes a UDS file [id]
+    """
 
-# Do encode fomr path
-if len(sys.argv) > 1:
-    command = str(sys.argv[1])
-    if command == "push":
-        do_upload(sys.argv[2], service)
-    elif command == "pull":
-        build_file(sys.argv[2], service)
-    elif command == "list":
-        list_files(service)
-else:
-    print("Please specify an option:\r")
-    print("push     Uploads a file")
-    print("pull     Downloads a file")
-    print("list     Finds all UDS files")
+    if len(sys.argv) > 1:
+        command = str(sys.argv[1])
+        if command == "push":
+            do_upload(sys.argv[2], service)
+        elif command == "pull":
+            build_file(sys.argv[2], service)
+        elif command == "list":
+            list_files(service)
+        else:
+            print(options)
+    else:
+        print(options)
 
+
+if __name__ == '__main__':
+    main()
