@@ -123,10 +123,13 @@ def upload_file_to_drive(media_file, file_metadata, service=None):
 
     return file
 
-def do_upload(path, service):
+def encrypt(chunk):
+    return base64.b64encode(chunk).decode()
+
+def file_to_media(path, service):
     with open(path, "rb") as f:
         data = f.read()
-        enc = base64.b64encode(data).decode()
+        enc = encrypt(data)
 
         size = byte_format.format(sys.getsizeof(data))
         encoded_size = byte_format.format(sys.getsizeof(enc))
@@ -142,7 +145,12 @@ def do_upload(path, service):
 
         name = ntpath.basename(path)
     
-    media = UDSFile(name, enc, mime, size, encoded_size, parents)
+    return UDSFile(name, enc, mime, size, encoded_size, parents)
+
+
+
+def do_upload(path, service):
+    media = file_to_media(path, service)
 
     MAX_LENGTH = 1000000
 
@@ -298,11 +306,11 @@ def list_files(service):
         table = []
         for item in items:
             #print('{0} ({1}) | {2}'.format(item['name'], item['id'],item['properties']['size']))
-            record = [item['name'], item['properties']['size'], item['properties']['encoded_size'], item['id']]
+            record = [item.get("name"), item.get("properties").get('size'), item.get('properties').get('encoded_size'), item.get('id'),item.get('properties').get('shared')]
             table.append(record)
 
 
-        print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID']))
+        print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', 'Shared']))
 
 def main():
     # Setup the Drive v3 API
