@@ -26,6 +26,8 @@ TEMP_FOLDER = "tmp"
 
 ERROR_OUTPUT = "[ERROR]"
 
+USE_MULTITHREADED_UPLOADS = True
+
 def get_downloads_folder():
     if not os.path.exists(DOWNLOADS_FOLDER):
             os.makedirs(DOWNLOADS_FOLDER)
@@ -120,8 +122,8 @@ def upload_file_to_drive(media_file, file_metadata, service=None):
     file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
                                     fields='id').execute()
-
-    return file
+    
+    return file, file_metadata
 
 def encrypt(chunk):
     return base64.b64encode(chunk).decode()
@@ -148,7 +150,6 @@ def file_to_media(path, service):
     return UDSFile(name, enc, mime, size, encoded_size, parents)
 
 
-
 def do_upload(path, service):
     media = file_to_media(path, service)
 
@@ -164,17 +165,12 @@ def do_upload(path, service):
     print("Created parent folder with ID %s" % (parent['id']))
 
     parent_id = parent['id']
-    
-    """with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-        for file,part in executor.map(upload_file_to_drive, media_file_list, file_metadata_list):
-            #progressBar("Uploading %s" % media.name,count,no_docs)
-            #count += 1
-            # This will order things correctly
-            print(file['id']) """
+
+    media_file_list = list()
+    file_metadata_list = list()
 
     for i in range(no_docs):
-        progressBar("Uploading %s" % media.name,i,no_docs)
-
+        progressBar("Preparing %s" % media.name,i,no_docs)
         current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
 
         file_metadata = {
@@ -186,15 +182,35 @@ def do_upload(path, service):
             }
         }
 
+        file_metadata_list.append(file_metadata)
+
         media_file = MediaIoBaseUpload(io.StringIO(current_substr),
                         mimetype='text/plain')
 
-        file = service.files().create(body=file_metadata, 
-                                    media_body=media_file,
-                                    fields='id').execute()    
-        
-    progressBar("Successfully Uploaded %s" % media.name,no_docs,no_docs)
+        media_file_list.append(media_file)
+    
+    progressBar("Prepared %s" % media.name,1,1)
+    
+    start_time = time.time()
 
+    if USE_MULTITHREADED_UPLOADS == True:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+            for file,metadata_part in executor.map(upload_file_to_drive, media_file_list, file_metadata_list):
+                progressBar("Uploading %s" % media.name,int(metadata_part.get("properties").get("part")),no_docs)
+                #count += 1
+                # This will order things correctly
+    else:
+        for i in range(no_docs):
+            progressBar("Uploading %s" % media.name,i,no_docs)
+
+            file = service.files().create(body=file_metadata_list[i], 
+                                        media_body=media_file_list[i],
+                                        fields='id').execute()    
+            
+        
+    finish_time = round(time.time() - start_time, 1)
+
+    progressBar("Successfully Uploaded %s in %ss" % (media.name, finish_time),no_docs,no_docs)
     
 
 def build_file(parent_id,service):
@@ -287,7 +303,6 @@ def convert_file(file_id, service):
     
 
 
-
     # An alternative method would be to use partial download headers
     # and convert and upload the parts individually. Perhaps a 
     # future release will implement this.
@@ -337,13 +352,23 @@ def main():
     if len(sys.argv) > 1:
         command = str(sys.argv[1])
         if command == "push":
-            do_upload(sys.argv[2], service)
+            if sys.argv[2] == "--disable-multi":
+                USE_MULTITHREADED_UPLOADS = False
+                file_path = sys.argv[3]
+            else:
+                file_path = sys.argv[2]
+            do_upload(file_path, service)
         elif command == "pull":
             build_file(sys.argv[2], service)
         elif command == "list":
             list_files(service)
         elif command == "convert":
-            convert_file(sys.argv[2], service)
+            if sys.argv[2] == "--delete":
+                DELETE_FILE_AFTER_CONVERT = True
+                id = sys.argv[3]
+            else:
+                id = sys.argv[2]
+            convert_file(id, service)
         else:
             print(options)
     else:
