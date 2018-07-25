@@ -13,12 +13,13 @@ import base64
 import math
 import urllib.request
 import ntpath
+import mmap
 import io
 import os
 import time
 import shutil
 import concurrent.futures
-from classes import UDSFile 
+from classes import *
 import byte_format
 
 DOWNLOADS_FOLDER = "downloads"
@@ -27,6 +28,11 @@ TEMP_FOLDER = "tmp"
 ERROR_OUTPUT = "[ERROR]"
 
 USE_MULTITHREADED_UPLOADS = True
+
+MAX_DOC_LENGTH = 1000000
+MAX_RAM_MB = 1024
+MAX_WORKERS_ALLOWED = 10
+CHUNK_READ_LENGTH_BYTES = 750000
 
 def get_downloads_folder():
     if not os.path.exists(DOWNLOADS_FOLDER):
@@ -48,14 +54,20 @@ def get_base_folder(service):
     else:
         print("%s Multiple UDS Roots found." % ERROR_OUTPUT)
 
+def characters_to_bytes(chars):
+    return round((3/4) * chars)
 
-def progressBar(title, value, endvalue, bar_length=30):
+def progress_bar(title, value, endvalue, bar_length=30):
         percent = float(value) / endvalue
         arrow = '█' * int(round(percent * bar_length))
         spaces = ' ' * (bar_length - len(arrow))
 
         sys.stdout.write("\r"+title+": [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
         sys.stdout.flush()
+
+def write_status(status):
+    sys.stdout.write("\r%s" % status)
+    sys.stdout.flush()
 
 def get_service():
     SCOPES = 'https://www.googleapis.com/auth/drive'
@@ -125,93 +137,75 @@ def upload_file_to_drive(media_file, file_metadata, service=None):
     
     return file, file_metadata
 
-def encrypt(chunk):
-    return base64.b64encode(chunk).decode()
+def encode(chunk):
+    enc = base64.b64encode(chunk).decode()
+    return enc
 
-def file_to_media(path, service):
-    with open(path, "rb") as f:
-        data = f.read()
-        enc = encrypt(data)
+def decode(chunk):
+    missing_padding = len(chunk) % 4
+    if missing_padding != 0:
+        chunk += b'='* (4 - missing_padding)
+    return base64.decodestring(chunk)
 
-        size = byte_format.format(sys.getsizeof(data))
-        encoded_size = byte_format.format(sys.getsizeof(enc))
+def upload_chunked_part(chunk):
+    #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
-        parents = [get_base_folder(service)['id']]
+    with open(chunk.path, "r") as fd:
+        mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
+        chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
-        enc = enc.replace("b'","")
-        enc = enc.replace("'","")
+    encoded_chunk = encode(chunk_bytes)
 
-        mime = MimeTypes()
-        url = urllib.request.pathname2url(path) 
-        mime_type = mime.guess_type(url)[0]
-
-        name = ntpath.basename(path)
-    
-    return UDSFile(name, enc, mime, size, encoded_size, parents)
-
-
-def do_upload(path, service):
-    media = file_to_media(path, service)
-
-    MAX_LENGTH = 1000000
-
-    length = len(media.base64)
-    no_docs = math.ceil(length / MAX_LENGTH)
-
-    print("%s requires %s Docs to store." % (media.name, no_docs))
-
-    # Creat folder ID
-    parent = create_folder(media, service)
-    print("Created parent folder with ID %s" % (parent['id']))
-
-    parent_id = parent['id']
-
-    media_file_list = list()
-    file_metadata_list = list()
-
-    for i in range(no_docs):
-        progressBar("Preparing %s" % media.name,i,no_docs)
-        current_substr = media.base64[i * MAX_LENGTH:(i+1) * MAX_LENGTH]
-
-        file_metadata = {
-            'name': media.name + str(i),
+    file_metadata = {
+            'name': chunk.media.name + str(chunk.part),
             'mimeType': 'application/vnd.google-apps.document',
-            'parents': [parent_id],
+            'parents': [chunk.parent],
             'properties': {
-                'part': str(i)
+                'part': str(chunk.part)
             }
         }
 
-        file_metadata_list.append(file_metadata)
-
-        media_file = MediaIoBaseUpload(io.StringIO(current_substr),
+    mediaio_file = MediaIoBaseUpload(io.StringIO(encoded_chunk),
                         mimetype='text/plain')
 
-        media_file_list.append(media_file)
-    
-    progressBar("Prepared %s" % media.name,1,1)
-    
+    upload_file_to_drive(mediaio_file, file_metadata)
+
+    return len(chunk_bytes)
+
+
+def do_chunked_upload(path, service):
+    # Prepare media file
+    size = os.stat(path).st_size 
+    encoded_size = size * (4/3)
+
+    root = [get_base_folder(service)['id']]
+
+    media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
+                    byte_format.format(size), byte_format.format(encoded_size), parents=root)
+
+    parent = create_folder(media, service)
+    print("Created parent folder with ID %s" % (parent['id']))
+
+    # Should be the same
+    no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
+    no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
+    print("Requires %s chunks to read and %s docs to store." % (no_chunks, no_docs))
+
+    chunk_list = list()
+    for i in range(no_docs):
+        chunk_list.append(Chunk(path, i, size, media=media, parent=parent['id']))
+
     start_time = time.time()
 
-    if USE_MULTITHREADED_UPLOADS == True:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-            for file,metadata_part in executor.map(upload_file_to_drive, media_file_list, file_metadata_list):
-                progressBar("Uploading %s" % media.name,int(metadata_part.get("properties").get("part")),no_docs)
-                #count += 1
-                # This will order things correctly
-    else:
-        for i in range(no_docs):
-            progressBar("Uploading %s" % media.name,i,no_docs)
+    total = 0
+    with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+            for file in executor.map(upload_chunked_part, chunk_list):
+                total = total + file
+                progress_bar("Uploading %s" % media.name, total, size)   
 
-            file = service.files().create(body=file_metadata_list[i], 
-                                        media_body=media_file_list[i],
-                                        fields='id').execute()    
-            
-        
     finish_time = round(time.time() - start_time, 1)
 
-    progressBar("Successfully Uploaded %s in %ss" % (media.name, finish_time),no_docs,no_docs)
-    
+    progress_bar("Uploaded %s in %ss" % (media.name, finish_time), total, size)  
 
 def build_file(parent_id,service):
     # This will fetch the Docs one by one, concatting them 
@@ -237,52 +231,33 @@ def build_file(parent_id,service):
         #print('Parts of %s:' % folder['name'])
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
-        encoded_parts = ""
+        f = open("%s/%s" % (get_downloads_folder(),folder['name']),"wb")
 
         for i,item in enumerate(items):
             #print('%s (%s)' % (item['properties']['part'], item['id']))
-            progressBar("Downloading %s" % folder['name'],i,len(items))
+            progress_bar("Downloading %s" % folder['name'],i,len(items))
 
-            encoded_part = reassemble_part(item['id'], service)
-            encoded_parts = encoded_parts + encoded_part
+            encoded_part = download_part(item['id'], service)
+            
+            # Decode
+            decoded_part = decode(encoded_part)
+
+            # Append decoded part to file
+            f.write(decoded_part)
         
-        progressBar("Downloaded %s" % folder['name'],1,1)
-
-        # Change string so it works with base64decode (legacy at this point)
-        encoded_parts = encoded_parts.replace("b\"\\xef\\xbb\\xbfb'","")
-        encoded_parts = encoded_parts.replace("b'\\xef\\xbb\\xbf","")
-        encoded_parts = encoded_parts.replace("'\"","")
-        encoded_parts = encoded_parts.replace("'","")
-        
-        
-
-        t = open("%s/%s.download" % (get_downloads_folder(),folder['name']),"w+")
-        t.write(encoded_parts)
-        t.close()
-
-        decoded_part = base64.b64decode(encoded_parts)
-
-        f = open("%s/%s" % (get_downloads_folder(),folder['name']),"wb")
-        f.write(decoded_part)
         f.close()  
 
-        # Tidy up temp files
-        try:
-             os.remove("%s/%s.download" % (get_downloads_folder(),folder['name']))   
-        except OSError as e: 
-            print ("Failed with: %s" % e.strerror)
-            print ("Error code: %s" % e.code)
+        progress_bar("Downloaded %s" % folder['name'],1,1)     
           
             
-
-def reassemble_part(part_id, service):
+def download_part(part_id, service):
     request = service.files().export_media(fileId=part_id, mimeType='text/plain')
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while done is False:
         status, done = downloader.next_chunk()
-    return str(fh.getvalue())
+    return fh.getvalue()
 
 def convert_file(file_id, service):
     # Get file metadata
@@ -300,7 +275,7 @@ def convert_file(file_id, service):
     print("Downloaded %s" % metadata['name'])
     do_upload(path, service)
 
-    
+
 
 
     # An alternative method would be to use partial download headers
@@ -311,7 +286,7 @@ def list_files(service):
     # Call the Drive v3 API
     results = service.files().list(
         q="properties has {key='uds' and value='true'} and trashed=false",
-        pageSize=10, 
+        pageSize=1000, 
         fields="nextPageToken, files(id, name, properties)").execute()
     items = results.get('files', [])
     if not items:
@@ -357,7 +332,7 @@ def main():
                 file_path = sys.argv[3]
             else:
                 file_path = sys.argv[2]
-            do_upload(file_path, service)
+            do_chunked_upload(file_path, service)
         elif command == "pull":
             build_file(sys.argv[2], service)
         elif command == "list":
