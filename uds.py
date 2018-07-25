@@ -201,9 +201,12 @@ def do_chunked_upload(path, service):
     with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
             for file in executor.map(upload_chunked_part, chunk_list):
                 total = total + file
-                progress_bar("Uploading %s" % media.name, total, size)   
+                elapsed_time = round(time.time() - start_time, 2)
+                current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
+                progress_bar("Uploading %s at %sMB/s" % (media.name, current_speed), total, size)   
 
     finish_time = round(time.time() - start_time, 1)
+
 
     progress_bar("Uploaded %s in %ss" % (media.name, finish_time), total, size)  
 
