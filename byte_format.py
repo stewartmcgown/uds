@@ -1,4 +1,4 @@
-def format(bytes):
+def format(bytes, numeric=False):
     if bytes < 0:
         raise ValueError("!!! number_of_bytes can't be smaller than 0 !!!")
 
@@ -26,4 +26,7 @@ def format(bytes):
     precision = 1
     bytes = round(bytes, precision)
 
-    return str(bytes) + ' ' + unit
+    if numeric:
+        return bytes
+    else:
+        return str(bytes) + ' ' + unit
