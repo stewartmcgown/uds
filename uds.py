@@ -18,6 +18,7 @@ import io
 import os
 import time
 import shutil
+import cryptography
 import concurrent.futures
 from classes import *
 import byte_format
@@ -95,12 +96,14 @@ def assign_property(id):
 
 def create_folder(media, service):
 
+
     file_metadata = {
         'name': media.name,
         'mimeType': 'application/vnd.google-apps.folder',
         'properties': {
             'uds': 'true',
             'size': media.size,
+            'size_numeric': media.size_numeric,
             'encoded_size': media.encoded_size
         },
         'parents': media.parents
@@ -131,11 +134,32 @@ def create_root_folder(name, service, properties={}):
 def upload_file_to_drive(media_file, file_metadata, service=None):
     if service == None:
         service = get_service()
-    file = service.files().create(body=file_metadata, 
+    while True:
+        try:
+            file = service.files().create(body=file_metadata, 
                                     media_body=media_file,
                                     fields='id').execute()
+            break
+        except HttpError as e:
+            print("Failed to upload chunk %s. Retrying... " % file_metadata.properties.part)
+            time.sleep(1)
+            continue
+    
     
     return file, file_metadata
+
+def encrypt(chunk):
+    backend = default_backend()
+    key = os.urandom(32)
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+    encryptor = cipher.encryptor()
+    ct = encryptor.update(b"a secret message") + encryptor.finalize()
+    return ct
+
+def decrypt(chunk):
+    decryptor = cipher.decryptor()
+    decryptor.update(ct) + decryptor.finalize()
 
 def encode(chunk):
     enc = base64.b64encode(chunk).decode()
@@ -181,7 +205,7 @@ def do_chunked_upload(path, service):
     root = [get_base_folder(service)['id']]
 
     media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                    byte_format.format(size), byte_format.format(encoded_size), parents=root)
+                    byte_format.format(size), byte_format.format(encoded_size), parents=root, size_numeric=size)
 
     parent = create_folder(media, service)
     print("Created parent folder with ID %s" % (parent['id']))
@@ -210,19 +234,32 @@ def do_chunked_upload(path, service):
 
     progress_bar("Uploaded %s in %ss" % (media.name, finish_time), total, size)  
 
+def get_parts_in_folder(parent_id, service, token=None):
+    all_parts = []
+
+    while True:
+        page_of_files = service.files().list(
+            q="parents in '%s'" % parent_id,
+            pageSize=100,
+            pageToken = token,
+            fields="nextPageToken, files(id, name, properties)").execute()
+
+        all_parts = all_parts + (page_of_files.get("files", []))
+
+        token = page_of_files.get("nextPageToken")
+
+        if token == None:
+            break            
+
+    return all_parts
+
 def build_file(parent_id,service):
     # This will fetch the Docs one by one, concatting them 
     # to a local base64 file. The file will then be converted 
     # from base64 to the appropriate mimetype
-    files = service.files().list(
-        q="parents in '%s'" % parent_id,
-        pageSize=100, 
-        fields="nextPageToken, files(id, name, properties)").execute()
+    items = get_parts_in_folder(parent_id, service)
     
-    folder = service.files().get(fileId=parent_id).execute()
-
-    items = files.get('files', [])
-    
+    folder = service.files().get(fileId=parent_id).execute()    
      
     if not items:
         print('No parts found.')
@@ -298,48 +335,16 @@ def list_files(service):
         #print('\nUDS Files in Drive:')
         total = 0
         table = []
+        saved_bytes = 0
         for item in items:
             #print('{0} ({1}) | {2}'.format(item['name'], item['id'],item['properties']['size']))
             record = [item.get("name"), item.get("properties").get('size'), item.get('properties').get('encoded_size'), item.get('id'),item.get('properties').get('shared')]
             table.append(record)
-
-            total += sizeToFloat(item.get('properties').get('size'))
+            saved_bytes += float(item.get("properties").get('size_numeric'))
 
         print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', 'Shared']))
-
-        print("\nTotal storage saved:", byte_format.format(total))
-
-def sizeToFloat(size_str):
-    multipliers = {
-        'kilobyte':  1024,
-        'megabyte':  1024 ** 2,
-        'gigabyte':  1024 ** 3,
-        'terabyte':  1024 ** 4,
-        'petabyte':  1024 ** 5,
-        'exabyte':   1024 ** 6,
-        'zetabyte':  1024 ** 7,
-        'yottabyte': 1024 ** 8,
-        'kb': 1024,
-        'mb': 1024**2,
-        'gb': 1024**3,
-        'tb': 1024**4,
-        'pb': 1024**5,
-        'eb': 1024**6,
-        'zb': 1024**7,
-        'yb': 1024**8,
-    }
-
-    for suffix in multipliers:
-        size_str = size_str.lower().strip().strip('s')
-        if size_str.lower().endswith(suffix):
-            return int(float(size_str[0:-len(suffix)]) * multipliers[suffix])
-    else:
-        if size_str.endswith('b'):
-            size_str = size_str[0:-1]
-        elif size_str.endswith('byte'):
-            size_str = size_str[0:-4]
-    return int(size_str)
-
+        print("")
+        print("\rStorage saved: %s" % byte_format.format(saved_bytes))
 
 def main():
     # Setup the Drive v3 API

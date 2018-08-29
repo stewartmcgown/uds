@@ -1,9 +1,10 @@
 class UDSFile(object):
-    def __init__(self, name, base64, mime, size, encoded_size, parents=['root']):
+    def __init__(self, name, base64, mime, size, encoded_size, parents=['root'], size_numeric=None):
         self.name = name
         self.base64 = base64
         self.mime = mime
         self.size = size
+        self.size_numeric = size_numeric
         self.encoded_size = encoded_size
         self.parents = parents
 
