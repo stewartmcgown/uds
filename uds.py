@@ -296,14 +296,50 @@ def list_files(service):
         print('No UDS files found.')
     else:
         #print('\nUDS Files in Drive:')
+        total = 0
         table = []
         for item in items:
             #print('{0} ({1}) | {2}'.format(item['name'], item['id'],item['properties']['size']))
             record = [item.get("name"), item.get("properties").get('size'), item.get('properties').get('encoded_size'), item.get('id'),item.get('properties').get('shared')]
             table.append(record)
 
+            total += sizeToFloat(item.get('properties').get('size'))
 
         print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', 'Shared']))
+
+        print("\nTotal storage saved:", byte_format.format(total))
+
+def sizeToFloat(size_str):
+    multipliers = {
+        'kilobyte':  1024,
+        'megabyte':  1024 ** 2,
+        'gigabyte':  1024 ** 3,
+        'terabyte':  1024 ** 4,
+        'petabyte':  1024 ** 5,
+        'exabyte':   1024 ** 6,
+        'zetabyte':  1024 ** 7,
+        'yottabyte': 1024 ** 8,
+        'kb': 1024,
+        'mb': 1024**2,
+        'gb': 1024**3,
+        'tb': 1024**4,
+        'pb': 1024**5,
+        'eb': 1024**6,
+        'zb': 1024**7,
+        'yb': 1024**8,
+    }
+
+    for suffix in multipliers:
+        size_str = size_str.lower().strip().strip('s')
+        if size_str.lower().endswith(suffix):
+            return int(float(size_str[0:-len(suffix)]) * multipliers[suffix])
+    else:
+        if size_str.endswith('b'):
+            size_str = size_str[0:-1]
+        elif size_str.endswith('byte'):
+            size_str = size_str[0:-4]
+    return int(size_str)
+
 
 def main():
     # Setup the Drive v3 API
