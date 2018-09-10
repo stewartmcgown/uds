@@ -340,11 +340,12 @@ def list_files(service):
             #print('{0} ({1}) | {2}'.format(item['name'], item['id'],item['properties']['size']))
             record = [item.get("name"), item.get("properties").get('size'), item.get('properties').get('encoded_size'), item.get('id'),item.get('properties').get('shared')]
             table.append(record)
-            saved_bytes += float(item.get("properties").get('size_numeric'))
+            #print(item.get("properties"))
+            #saved_bytes += float(item.get("properties").get('size_numeric'))
 
         print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', 'Shared']))
-        print("")
-        print("\rStorage saved: %s" % byte_format.format(saved_bytes))
+        #print("")
+        #print("\rStorage saved: %s" % byte_format.format(saved_bytes))
 
 def main():
     # Setup the Drive v3 API
