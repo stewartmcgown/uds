@@ -8,6 +8,7 @@ from oauth2client import file, client, tools
 from mimetypes import MimeTypes
 from tabulate import tabulate
 from io import StringIO
+
 import sys
 import base64
 import math
@@ -20,8 +21,11 @@ import time
 import shutil
 import cryptography
 import concurrent.futures
-from classes import *
 import byte_format
+
+from classes import *
+from Encoder import *
+from API import *
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
@@ -148,28 +152,6 @@ def upload_file_to_drive(media_file, file_metadata, service=None):
     
     return file, file_metadata
 
-def encrypt(chunk):
-    backend = default_backend()
-    key = os.urandom(32)
-    iv = os.urandom(16)
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
-    encryptor = cipher.encryptor()
-    ct = encryptor.update(b"a secret message") + encryptor.finalize()
-    return ct
-
-def decrypt(chunk):
-    decryptor = cipher.decryptor()
-    decryptor.update(ct) + decryptor.finalize()
-
-def encode(chunk):
-    enc = base64.b64encode(chunk).decode()
-    return enc
-
-def decode(chunk):
-    missing_padding = len(chunk) % 4
-    if missing_padding != 0:
-        chunk += b'='* (4 - missing_padding)
-    return base64.decodestring(chunk)
 
 def upload_chunked_part(chunk):
     #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
@@ -316,49 +298,15 @@ def convert_file(file_id, service):
     do_upload(path, service)
 
 
-
-
     # An alternative method would be to use partial download headers
     # and convert and upload the parts individually. Perhaps a 
     # future release will implement this.
 
-def list_files(service):
-    # Call the Drive v3 API
-    results = service.files().list(
-        q="properties has {key='uds' and value='true'} and trashed=false",
-        pageSize=1000, 
-        fields="nextPageToken, files(id, name, properties)").execute()
-    items = results.get('files', [])
-    if not items:
-        print('No UDS files found.')
-    else:
-        #print('\nUDS Files in Drive:')
-        total = 0
-        table = []
-        saved_bytes = 0
-        for item in items:
-            #print('{0} ({1}) | {2}'.format(item['name'], item['id'],item['properties']['size']))
-            record = [item.get("name"), item.get("properties").get('size'), item.get('properties').get('encoded_size'), item.get('id'),item.get('properties').get('shared')]
-            table.append(record)
-            #print(item.get("properties"))
-            #saved_bytes += float(item.get("properties").get('size_numeric'))
-
-        print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', 'Shared']))
-        #print("")
-        #print("\rStorage saved: %s" % byte_format.format(saved_bytes))
-
 def main():
-    # Setup the Drive v3 API
-    SCOPES = ['https://www.googleapis.com/auth/drive']
-    store = file.Storage('credentials.json')
-    creds = store.get()
-    if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets('client_secret.json', SCOPES)
-        creds = tools.run_flow(flow, store)
-    service = build('drive', 'v3', http=creds.authorize(Http()))
+    api = GoogleAPI()
 
     # Initial look for folder and first time setup if not
-    uds_root = get_base_folder(service)
+    uds_root = get_base_folder(api.service)
     BASE_FOLDER = uds_root
 
     # Options
@@ -377,18 +325,18 @@ def main():
                 file_path = sys.argv[3]
             else:
                 file_path = sys.argv[2]
-            do_chunked_upload(file_path, service)
+            do_chunked_upload(file_path, api.service)
         elif command == "pull":
-            build_file(sys.argv[2], service)
+            build_file(sys.argv[2], api.service)
         elif command == "list":
-            list_files(service)
+            api.print_list_files()
         elif command == "convert":
             if sys.argv[2] == "--delete":
                 DELETE_FILE_AFTER_CONVERT = True
                 id = sys.argv[3]
             else:
                 id = sys.argv[2]
-            convert_file(id, service)
+            convert_file(id, api.service)
         else:
             print(options)
     else:
