@@ -2,11 +2,16 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 from httplib2 import Http
 from oauth2client import file, client, tools
 from mimetypes import MimeTypes
 from tabulate import tabulate
 from urllib.error import HTTPError
+
+import time
+import io
+
 
 from classes import UDSFile
 
@@ -14,7 +19,10 @@ class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
 
     def __init__(self):
-        # Setup the Drive v3 API
+        self.reauth()
+
+    def reauth(self):
+        # Set up the Drive v3 API
         SCOPES = ['https://www.googleapis.com/auth/drive']
         store = file.Storage('credentials.json')
         creds = store.get()
@@ -96,7 +104,7 @@ class GoogleAPI():
                 size = f.get("size"),
                 size_numeric = props.get("size_numeric"),
                 encoded_size = props.get("encoded_size"),
-                id_ = f.get("id"),
+                id = f.get("id"),
                 shared = props.get("shared")
             ))
 
@@ -144,15 +152,29 @@ class GoogleAPI():
     def export_media(self, id):
         return self.service.files().export_media(fileId=id, mimeType='text/plain')
 
-    def upload_single_file(self, media_file, file_metadata):
+    def test_upload(self):
+        file_metadata = {
+            'name': "TestUDS",
+            'mimeType': 'text/plain',
+        }
+
+        mediaio_file = MediaIoBaseUpload(io.StringIO("hello"),
+                                         mimetype='text/plain')
+
+        self.service.files().create(body=file_metadata, media_body=mediaio_file).execute()
+
+
+
+    def upload_single_file(self, media_file, file_metadata):       
         while True:
             try:
                 file = self.service.files().create(body=file_metadata, 
                                         media_body=media_file,
                                         fields='id').execute()
                 break
-            except HTTPError as e:
-                print("Failed to upload chunk %s. Retrying... " % file_metadata.properties.part)
+            except HttpError as e:
+                print(e._get_reason())
+                print("Failed to upload chunk %s. Retrying... " % file_metadata.get("properties").get("part"))
                 time.sleep(1)
                 continue
         

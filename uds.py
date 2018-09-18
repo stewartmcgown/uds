@@ -145,14 +145,22 @@ class UDS():
 
         total = 0
 
-        # Concurrently execute chunk upload and report back when done.
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+        for chunk in chunk_list:
+            total = total + 1
+            self.upload_chunked_part(chunk)
+            elapsed_time = round(time.time() - start_time, 2)
+            current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
+            progress_bar("Uploading %s at %sMB/s" %
+                         (media.name, current_speed), total, size)
+
+         #Concurrently execute chunk upload and report back when done.
+        """with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
             for file in executor.map(self.upload_chunked_part, chunk_list):
                 total = total + file
                 elapsed_time = round(time.time() - start_time, 2)
                 current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
                 progress_bar("Uploading %s at %sMB/s" %
-                             (media.name, current_speed), total, size)
+                             (media.name, current_speed), total, size)"""
 
         finish_time = round(time.time() - start_time, 1)
 
