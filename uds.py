@@ -22,11 +22,11 @@ import time
 import shutil
 import cryptography
 import concurrent.futures
-import byte_format
+import Format
 
 import Encoder
 
-from classes import *
+from FileParts import UDSFile, Chunk
 from API import *
 
 DOWNLOADS_FOLDER = "downloads"
@@ -123,7 +123,7 @@ class UDS():
         root = self.api.get_base_folder()['id']
 
         media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                        byte_format.format(size), byte_format.format(encoded_size), parents=[root], size_numeric=size)
+                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size)
 
         parent = self.api.create_media_folder(media)
         print("Created parent folder with ID %s" % (parent['id']))

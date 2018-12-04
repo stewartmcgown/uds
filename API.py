@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 import time
 import io
 
-from classes import UDSFile
+from FileParts import UDSFile
 
 class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
@@ -33,6 +33,7 @@ class GoogleAPI():
                 creds = tools.run_flow(flow, store)
             except:
                 print("%s Make sure you've saved your OAuth credentials as %s" % (GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
+                print("If you've already done that, then run uds.py without any arguments first.")
                 exit()
 
         self.service = build('drive', 'v3', http=creds.authorize(Http()))
