@@ -12,11 +12,11 @@ from urllib.error import HTTPError
 import time
 import io
 
-
 from classes import UDSFile
 
 class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
+    CLIENT_SECRET = 'client_secret.json'
 
     def __init__(self):
         self.reauth()
@@ -27,9 +27,13 @@ class GoogleAPI():
         store = file.Storage('credentials.json')
         creds = store.get()
         if not creds or creds.invalid:
-            flow = client.flow_from_clientsecrets(
-                'client_secret.json', SCOPES)
-            creds = tools.run_flow(flow, store)
+            try:
+                flow = client.flow_from_clientsecrets(
+                GoogleAPI.CLIENT_SECRET, SCOPES)
+                creds = tools.run_flow(flow, store)
+            except:
+                print("%s Make sure you've saved your OAuth credentials as %s" % (GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
+                exit()
 
         self.service = build('drive', 'v3', http=creds.authorize(Http()))
 

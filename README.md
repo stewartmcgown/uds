@@ -14,7 +14,7 @@ UDS is a tool to split files into base64 parts small enough to fit inside a Goog
 ### Authentication
   1. Head to [Google's API page](https://developers.google.com/drive/api/v3/quickstart/python) and enable the Drive API
   2. Download the configuration file as 'client_secret.json' to the UDS directory
-  
+  3. run `python uds.py` for initial set up
 
 #### Upload
 ```sh
