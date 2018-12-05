@@ -145,6 +145,7 @@ class UDS():
         start_time = time.time()
 
         total = 0
+        total_chunks = len(chunk_list)
 
         for chunk in chunk_list:
             total = total + 1
@@ -152,7 +153,7 @@ class UDS():
             elapsed_time = round(time.time() - start_time, 2)
             current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
             progress_bar("Uploading %s at %sMB/s" %
-                         (media.name, current_speed), total, size)
+                         (media.name, current_speed), total, total_chunks)
 
          #Concurrently execute chunk upload and report back when done.
         """with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
@@ -166,7 +167,7 @@ class UDS():
         finish_time = round(time.time() - start_time, 1)
 
         progress_bar("Uploaded %s in %ss" %
-                     (media.name, finish_time), total, size)
+                     (media.name, finish_time), 1, 1)
 
 
 def get_downloads_folder():
