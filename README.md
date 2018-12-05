@@ -1,11 +1,11 @@
 # :milky_way: UDS : Unlimited Drive Storage
 
-UDS is a tool to split files into base64 parts small enough to fit inside a Google Doc. Compatible with Python 3+.
+Store files in Google Docs without counting against your quota.
 
 ### Features
 
-- Store and list files in UDS format
-- Reassemble files to their original format
+- Upload files to Google Drive without using storage space
+- Download any stored files to your computer
 
 ### Logic
 
@@ -19,7 +19,7 @@ UDS is a tool to split files into base64 parts small enough to fit inside a Goog
 2. Download the configuration file as 'client_secret.json' to the UDS directory
 3. run `python uds.py` for initial set up
 
-#### Upload
+### Upload
 
 ```sh
 > python uds.py push Ubuntu.Desktop.16.04.iso
@@ -28,7 +28,7 @@ Created parent folder with ID 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Successfully Uploaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
 
-#### List
+### List
 
 ```sh
 > python uds.py list
@@ -37,9 +37,11 @@ Name                      Size   Encoded    ID
 Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 ```
 
-#### Download
+### Download
 
 ```sh
 > python uds.py pull
 Downloaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
+
+**Compatible with Python 3.**
