@@ -90,7 +90,9 @@ class UDS():
         return fh.getvalue()
 
     # Upload a chunked part to drive and return the size of the chunk
-    def upload_chunked_part(self, chunk):
+    def upload_chunked_part(self, chunk, api=None):
+        if not api:
+            api = self.api
         #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
         with open(chunk.path, "r") as fd:
@@ -147,22 +149,23 @@ class UDS():
         total = 0
         total_chunks = len(chunk_list)
 
-        for chunk in chunk_list:
+        """for chunk in chunk_list:
             total = total + 1
             self.upload_chunked_part(chunk)
             elapsed_time = round(time.time() - start_time, 2)
-            current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
+            current_speed = round((total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
             progress_bar("Uploading %s at %sMB/s" %
-                         (media.name, current_speed), total, total_chunks)
+                         (media.name, current_speed), total, total_chunks)"""
 
-         #Concurrently execute chunk upload and report back when done.
-        """with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
-            for file in executor.map(self.upload_chunked_part, chunk_list):
+        # Concurrently execute chunk upload and report back when done.
+        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+            for file in executor.map(ext_upload_chunked_part, chunk_list):
                 total = total + file
                 elapsed_time = round(time.time() - start_time, 2)
-                current_speed = round(total / (elapsed_time * 1024 * 1024), 2)
+                current_speed = round(
+                    (total) / (elapsed_time * 1024 * 1024), 2)
                 progress_bar("Uploading %s at %sMB/s" %
-                             (media.name, current_speed), total, size)"""
+                             (media.name, current_speed), total, size)
 
         finish_time = round(time.time() - start_time, 1)
 
@@ -184,6 +187,9 @@ def progress_bar(title, value, endvalue, bar_length=30):
     percent = float(value) / endvalue
     arrow = '█' * int(round(percent * bar_length))
     spaces = ' ' * (bar_length - len(arrow))
+
+    if value > endvalue:
+        value = endvalue
 
     sys.stdout.write(
         "\r"+title+": [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
@@ -271,6 +277,34 @@ def main():
             print(options)
     else:
         print(options)
+
+
+# Upload a chunked part to drive and return the size of the chunk
+def ext_upload_chunked_part(chunk):
+    api = GoogleAPI()
+    #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
+
+    with open(chunk.path, "r") as fd:
+        mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
+        chunk_bytes = mm[chunk.range_start:chunk.range_end]
+
+    encoded_chunk = Encoder.encode(chunk_bytes)
+
+    file_metadata = {
+        'name': chunk.media.name + str(chunk.part),
+        'mimeType': 'application/vnd.google-apps.document',
+        'parents': [chunk.parent],
+        'properties': {
+            'part': str(chunk.part)
+        }
+    }
+
+    mediaio_file = MediaIoBaseUpload(io.StringIO(encoded_chunk),
+                                     mimetype='text/plain')
+
+    api.upload_single_file(mediaio_file, file_metadata)
+
+    return len(chunk_bytes)
 
 
 if __name__ == '__main__':

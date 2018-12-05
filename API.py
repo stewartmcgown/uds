@@ -14,6 +14,7 @@ import io
 
 from FileParts import UDSFile
 
+
 class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
     CLIENT_SECRET = 'client_secret.json'
@@ -29,23 +30,26 @@ class GoogleAPI():
         if not creds or creds.invalid:
             try:
                 flow = client.flow_from_clientsecrets(
-                GoogleAPI.CLIENT_SECRET, SCOPES)
+                    GoogleAPI.CLIENT_SECRET, SCOPES)
                 creds = tools.run_flow(flow, store)
             except:
-                print("%s Make sure you've saved your OAuth credentials as %s" % (GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
-                print("If you've already done that, then run uds.py without any arguments first.")
+                print("%s Make sure you've saved your OAuth credentials as %s" % (
+                    GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
+                print(
+                    "If you've already done that, then run uds.py without any arguments first.")
                 exit()
 
         self.service = build('drive', 'v3', http=creds.authorize(Http()))
+        return self.service
 
     def get_base_folder(self):
         # Look for existing folder
         results = self.service.files().list(
             q="properties has {key='udsRoot' and value='true'} and trashed=false",
-            pageSize=1, 
+            pageSize=1,
             fields="nextPageToken, files(id, name, properties)").execute()
         folders = results.get('files', [])
-        
+
         if len(folders) == 0:
             return self.create_root_folder()
         elif len(folders) == 1:
@@ -58,16 +62,16 @@ class GoogleAPI():
         root_meta = {
             'name': "UDS Root",
             'mimeType': 'application/vnd.google-apps.folder',
-            'properties': {'udsRoot':'true'},
+            'properties': {'udsRoot': 'true'},
             'parents': []
         }
 
         root_folder = self.service.files().create(body=root_meta,
-                                            fields='id').execute()
+                                                  fields='id').execute()
 
         # Hide this folder
         self.service.files().update(fileId=root_folder['id'],
-                                        removeParents='root').execute()
+                                    removeParents='root').execute()
 
         return root_folder
 
@@ -85,7 +89,7 @@ class GoogleAPI():
         }
 
         file = self.service.files().create(body=file_metadata,
-                                            fields='id').execute()
+                                           fields='id').execute()
 
         return file
 
@@ -103,14 +107,14 @@ class GoogleAPI():
         for f in items:
             props = f.get("properties")
             files.append(UDSFile(
-                name = f.get("name"),
+                name=f.get("name"),
                 base64=None,
-                mime = f.get("mimeType"),
-                size = f.get("size"),
-                size_numeric = props.get("size_numeric"),
-                encoded_size = props.get("encoded_size"),
-                id = f.get("id"),
-                shared = props.get("shared")
+                mime=f.get("mimeType"),
+                size=f.get("size"),
+                size_numeric=props.get("size_numeric"),
+                encoded_size=props.get("encoded_size"),
+                id=f.get("id"),
+                shared=props.get("shared")
             ))
 
         return files
@@ -130,13 +134,13 @@ class GoogleAPI():
             token = page_of_files.get("nextPageToken")
 
             if token == None:
-                break            
+                break
 
         return all_parts
 
     def get_file(self, id):
-        return self.service.files().get(fileId=id).execute() 
-        
+        return self.service.files().get(fileId=id).execute()
+
     def print_list_files(self):
         items = self.list_files()
 
@@ -148,7 +152,8 @@ class GoogleAPI():
             table = []
             saved_bytes = 0
             for item in items:
-                record = [item.name, item.size, item.encoded_size, item.id_, item.shared]
+                record = [item.name, item.size,
+                          item.encoded_size, item.id_, item.shared]
                 table.append(record)
 
             print(tabulate(table, headers=[
@@ -168,20 +173,18 @@ class GoogleAPI():
 
         self.service.files().create(body=file_metadata, media_body=mediaio_file).execute()
 
-
-
-    def upload_single_file(self, media_file, file_metadata):       
+    def upload_single_file(self, media_file, file_metadata):
         while True:
             try:
-                file = self.service.files().create(body=file_metadata, 
-                                        media_body=media_file,
-                                        fields='id').execute()
+                file = self.service.files().create(body=file_metadata,
+                                                   media_body=media_file,
+                                                   fields='id').execute()
                 break
             except HttpError as e:
                 print(e._get_reason())
-                print("Failed to upload chunk %s. Retrying... " % file_metadata.get("properties").get("part"))
+                print("Failed to upload chunk %s. Retrying... " %
+                      file_metadata.get("properties").get("part"))
                 time.sleep(1)
                 continue
-        
-        
+
         return file, file_metadata
