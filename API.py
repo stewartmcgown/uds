@@ -15,6 +15,14 @@ import io
 from FileParts import UDSFile
 
 
+class FileNotFoundException(Exception):
+    pass
+
+
+class FileNotUDSException(Exception):
+    pass
+
+
 class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
     CLIENT_SECRET = 'client_secret.json'
@@ -93,7 +101,7 @@ class GoogleAPI():
 
         return file
 
-    def list_files(self):
+    def list_files(self, opts):
         # Call the Drive v3 API
         results = self.service.files().list(
             q="properties has {key='uds' and value='true'} and trashed=false",
@@ -138,26 +146,20 @@ class GoogleAPI():
 
         return all_parts
 
+    def delete_file(self, id):
+        # Ensure the file is a UDS one
+        try:
+            info = self.service.files().get(fileId=id, fields="*").execute()
+            print(info)
+            if info.get("properties").get("uds"):
+                return self.service.files().delete(fileId=id).execute()
+            else:
+                raise FileNotUDSException()
+        except:
+            raise FileNotFoundException()
+
     def get_file(self, id):
         return self.service.files().get(fileId=id).execute()
-
-    def print_list_files(self):
-        items = self.list_files()
-
-        if not items:
-            print('No UDS files found.')
-        else:
-            #print('\nUDS Files in Drive:')
-            total = 0
-            table = []
-            saved_bytes = 0
-            for item in items:
-                record = [item.name, item.size,
-                          item.encoded_size, item.id_, item.shared]
-                table.append(record)
-
-            print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID', 'Shared']))
 
     def export_media(self, id):
         return self.service.files().export_media(fileId=id, mimeType='text/plain')

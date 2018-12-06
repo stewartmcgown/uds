@@ -23,6 +23,7 @@ import shutil
 import cryptography
 import concurrent.futures
 import Format
+import argparse
 
 import Encoder
 
@@ -44,7 +45,19 @@ class UDS():
     def __init__(self):
         self.api = GoogleAPI()
 
-    def build_file(self, parent_id):
+    def delete_file(self, id):
+        try:
+            self.api.delete_file(id)
+            print("Deleted %s" % id)
+        except:
+            print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
+
+    def build_file(self, opts):
+        if not opts:
+            return
+
+        parent_id = opts.id
+
         # This will fetch the Docs one by one, concatting them
         # to a local base64 file. The file will then be converted
         # from base64 to the appropriate mimetype
@@ -172,6 +185,34 @@ class UDS():
         progress_bar("Uploaded %s in %ss" %
                      (media.name, finish_time), 1, 1)
 
+    def list(self, opts):
+        items = self.api.list_files(opts)
+
+        if not items:
+            print('No UDS files found.')
+        else:
+            #print('\nUDS Files in Drive:')
+            total = 0
+            table = []
+            saved_bytes = 0
+            for item in items:
+                record = [item.name, item.size,
+                          item.encoded_size, item.id_, item.shared]
+                table.append(record)
+
+            print(tabulate(table, headers=[
+                  'Name', 'Size', 'Encoded', 'ID', 'Shared']))
+
+    def actions(self, action, args):
+        switcher = {
+            "list": self.list,
+            "push": self.do_chunked_upload,
+            "pull": self.build_file,
+            "delete": self.delete_file
+        }
+
+        switcher.get(action)(args)
+
 
 def get_downloads_folder():
     if not os.path.exists(DOWNLOADS_FOLDER):
@@ -245,41 +286,27 @@ def main():
     uds_root = uds.api.get_base_folder()
     BASE_FOLDER = uds_root
 
-    # Options
-    options = """
-    push     Uploads a file from this computer [path_to_file]
-    pull     Downloads a UDS file [id]
-    list     Finds all UDS files
-    delete   Deletes a UDS file [id]
-    """
+    base_parser = argparse.ArgumentParser(add_help=False,
+                                          description="Store binary files as Google Docs")
+    base_parser.add_argument("command", choices=[
+        "pull", "push", "delete", "list"], help="An action to execute")
 
-    if len(sys.argv) > 1:
-        command = str(sys.argv[1])
-        if command == "push":
-            if sys.argv[2] == "--disable-multi":
-                USE_MULTITHREADED_UPLOADS = False
-                file_path = sys.argv[3]
-            else:
-                file_path = sys.argv[2]
-            uds.do_chunked_upload(file_path)
-        elif command == "pull":
-            uds.build_file(sys.argv[2])
-        elif command == "list":
-            uds.api.print_list_files()
-        elif command == "convert":
-            if sys.argv[2] == "--delete":
-                DELETE_FILE_AFTER_CONVERT = True
-                id = sys.argv[3]
-            else:
-                id = sys.argv[2]
-            convert_file(id)
-        else:
-            print(options)
-    else:
-        print(options)
+    id_parser = argparse.ArgumentParser(parents=[base_parser])
+    id_parser.add_argument("id", help="ID of file")
+
+    args = id_parser.parse_args(sys.argv[1:])
+
+    if args.command != "list" and not args.id:
+        id_parser.error("You must supply an ID")
+
+    print(args)
+
+    uds.actions(args.command, args)
 
 
 # Upload a chunked part to drive and return the size of the chunk
+
+
 def ext_upload_chunked_part(chunk):
     api = GoogleAPI()
     #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
