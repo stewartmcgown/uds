@@ -10,4 +10,4 @@ def decode(chunk):
     missing_padding = len(chunk) % 4
     if missing_padding != 0:
         chunk += b'='* (4 - missing_padding)
-    return base64.decodestring(chunk)
+    return base64.decodebytes(chunk)
