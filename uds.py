@@ -308,4 +308,7 @@ def ext_upload_chunked_part(chunk):
 
 
 if __name__ == '__main__':
-    main()
+    if (sys.version_info[0] < 3):
+        print("%s You must use Python 3+" % GoogleAPI.ERROR_OUTPUT)
+    else:
+        main()
