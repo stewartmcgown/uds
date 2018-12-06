@@ -52,12 +52,7 @@ class UDS():
         except:
             print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
 
-    def build_file(self, opts):
-        if not opts:
-            return
-
-        parent_id = opts.id
-
+    def build_file(self, parent_id):
         # This will fetch the Docs one by one, concatting them
         # to a local base64 file. The file will then be converted
         # from base64 to the appropriate mimetype
@@ -162,15 +157,16 @@ class UDS():
         total = 0
         total_chunks = len(chunk_list)
 
-        """for chunk in chunk_list:
+        for chunk in chunk_list:
             total = total + 1
             self.upload_chunked_part(chunk)
             elapsed_time = round(time.time() - start_time, 2)
-            current_speed = round((total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
+            current_speed = round(
+                (total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
             progress_bar("Uploading %s at %sMB/s" %
-                         (media.name, current_speed), total, total_chunks)"""
+                         (media.name, current_speed), total, total_chunks)
 
-        # Concurrently execute chunk upload and report back when done.
+        """# Concurrently execute chunk upload and report back when done.
         with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
             for file in executor.map(ext_upload_chunked_part, chunk_list):
                 total = total + file
@@ -178,14 +174,34 @@ class UDS():
                 current_speed = round(
                     (total) / (elapsed_time * 1024 * 1024), 2)
                 progress_bar("Uploading %s at %sMB/s" %
-                             (media.name, current_speed), total, size)
+                             (media.name, current_speed), total, size)"""
 
         finish_time = round(time.time() - start_time, 1)
 
         progress_bar("Uploaded %s in %ss" %
                      (media.name, finish_time), 1, 1)
 
-    def list(self, opts):
+    def convert_file(self, file_id):
+        # Get file metadata
+        metadata = service.files().get(fileId=file_id, fields="name").execute()
+
+        # Download the file and then call do_upload() on it
+        request = service.files().get_media(fileId=file_id)
+        path = "%s/%s" % (get_downloads_folder(), metadata['name'])
+        fh = io.FileIO(path, "wb")
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+
+        print("Downloaded %s" % metadata['name'])
+        do_upload(path, service)
+
+        # An alternative method would be to use partial download headers
+        # and convert and upload the parts individually. Perhaps a
+        # future release will implement this.
+
+    def list(self, opts=None):
         items = self.api.list_files(opts)
 
         if not items:
@@ -242,27 +258,6 @@ def write_status(status):
     sys.stdout.flush()
 
 
-def convert_file(file_id, service):
-    # Get file metadata
-    metadata = service.files().get(fileId=file_id, fields="name").execute()
-
-    # Download the file and then call do_upload() on it
-    request = service.files().get_media(fileId=file_id)
-    path = f"{get_downloads_folder()}/{metadata['name']}"
-    fh = io.FileIO(path, "wb")
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-
-    print("Downloaded %s" % metadata['name'])
-    do_upload(path, service)
-
-    # An alternative method would be to use partial download headers
-    # and convert and upload the parts individually. Perhaps a
-    # future release will implement this.
-
-
 def main():
     global BASE_FOLDER, USE_MULTITHREADED_UPLOADS, DELETE_FILE_AFTER_CONVERT
     uds = UDS()
@@ -271,22 +266,38 @@ def main():
     uds_root = uds.api.get_base_folder()
     BASE_FOLDER = uds_root
 
-    base_parser = argparse.ArgumentParser(add_help=False,
-                                          description="Store binary files as Google Docs")
-    base_parser.add_argument("command", choices=[
-        "pull", "push", "delete", "list"], help="An action to execute")
+    # Options
+    options = """
+    push     Uploads a file from this computer [path_to_file]
+    pull     Downloads a UDS file [id]
+    list     Finds all UDS files
+    delete   Deletes a UDS file [id]
+    """
 
-    id_parser = argparse.ArgumentParser(parents=[base_parser])
-    id_parser.add_argument("id", help="ID of file")
-
-    args = id_parser.parse_args(sys.argv[1:])
-
-    if args.command != "list" and not args.id:
-        id_parser.error("You must supply an ID")
-
-    print(args)
-
-    uds.actions(args.command, args)
+    if len(sys.argv) > 1:
+        command = str(sys.argv[1])
+        if command == "push":
+            if sys.argv[2] == "--disable-multi":
+                USE_MULTITHREADED_UPLOADS = False
+                file_path = sys.argv[3]
+            else:
+                file_path = sys.argv[2]
+            uds.do_chunked_upload(file_path)
+        elif command == "pull":
+            uds.build_file(sys.argv[2])
+        elif command == "list":
+            uds.list()
+        elif command == "convert":
+            if sys.argv[2] == "--delete":
+                DELETE_FILE_AFTER_CONVERT = True
+                id = sys.argv[3]
+            else:
+                id = sys.argv[2]
+            convert_file(id)
+        else:
+            print(options)
+    else:
+        print(options)
 
 
 # Upload a chunked part to drive and return the size of the chunk

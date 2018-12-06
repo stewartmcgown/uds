@@ -101,7 +101,7 @@ class GoogleAPI():
 
         return file
 
-    def list_files(self, opts):
+    def list_files(self, opts=None):
         # Call the Drive v3 API
         results = self.service.files().list(
             q="properties has {key='uds' and value='true'} and trashed=false",
