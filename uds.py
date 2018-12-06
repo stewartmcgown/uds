@@ -239,6 +239,7 @@ def convert_file(file_id, service):
 
 
 def main():
+    global BASE_FOLDER, USE_MULTITHREADED_UPLOADS, DELETE_FILE_AFTER_CONVERT
     uds = UDS()
 
     # Initial look for folder and first time setup if not
