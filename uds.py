@@ -242,22 +242,6 @@ def write_status(status):
     sys.stdout.flush()
 
 
-def assign_property(id):
-    body = {
-        'key': 'uds',
-        'value': 'true',
-        'visibility': 'PUBLIC'
-    }
-
-    try:
-        p = service.properties().insert(
-            fileId=id, body=body).execute()
-        return p
-    except error:
-        print('An error occurred: %s' % error)
-    return None
-
-
 def convert_file(file_id, service):
     # Get file metadata
     metadata = service.files().get(fileId=file_id, fields="name").execute()
