@@ -46,4 +46,4 @@ Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Downloaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
 
-**Compatible with Python 3.**
+**Compatible with Python 3 and up.**
