@@ -18,7 +18,7 @@ sorry @ the guys from google internal forums who are looking at this
 ### Authentication
 
 1. Head to [Google's API page](https://developers.google.com/drive/api/v3/quickstart/python) and enable the Drive API
-2. Download the configuration file, rename it to 'client_secret.json' and put it in the UDS directory
+2. Download the configuration file, rename it to 'client_secret.json' , and put it in the UDS directory
 3. run `python uds.py` for initial set up
 
 ### Upload
