@@ -150,7 +150,7 @@ class GoogleAPI():
         # Ensure the file is a UDS one
         try:
             info = self.service.files().get(fileId=id, fields="*").execute()
-            print(info)
+
             if info.get("properties").get("uds"):
                 return self.service.files().delete(fileId=id).execute()
             else:
