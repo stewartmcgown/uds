@@ -118,7 +118,7 @@ class GoogleAPI():
                 name=f.get("name"),
                 base64=None,
                 mime=f.get("mimeType"),
-                size=f.get("size"),
+                size=props.get("size"),
                 size_numeric=props.get("size_numeric"),
                 encoded_size=props.get("encoded_size"),
                 id=f.get("id"),
