@@ -213,11 +213,11 @@ class UDS():
             saved_bytes = 0
             for item in items:
                 record = [item.name, item.size,
-                          item.encoded_size, item.id_, item.shared]
+                          item.encoded_size, item.id_]
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID', 'Shared']))
+                  'Name', 'Size', 'Encoded', 'ID']))
 
     def actions(self, action, args):
         switcher = {
