@@ -41,7 +41,6 @@ MAX_DOC_LENGTH = 1000000
 MAX_RAM_MB = 1024
 MAX_WORKERS_ALLOWED = 10
 CHUNK_READ_LENGTH_BYTES = 750000
-size2 = 0
 
 class UDS():
     def __init__(self):
@@ -131,8 +130,6 @@ class UDS():
         # Prepare media file
         size = os.stat(path).st_size
         encoded_size = size * (4/3)
-        global size2
-        size2 = int(encoded_size / float(1.3))
         root = self.api.get_base_folder()['id']
 
         media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
