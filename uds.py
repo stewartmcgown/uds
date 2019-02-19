@@ -47,7 +47,7 @@ class UDS():
     def __init__(self):
         self.api = GoogleAPI()
 
-    def delete_file(self, id, name=None):  # Added argument name for commands using name argument
+    def delete_file(self, id, name=None, mode_=None):  # Added argument name for commands using name argument
         try:
             self.api.delete_file(id)
             if name is not None:
@@ -55,7 +55,10 @@ class UDS():
             else:
                 print("Deleted %s" % id)  # If UDS commands are used, this displays the ID
         except:
-            print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
+            if mode_ != "quiet":
+                print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
+            else:
+                print("", end='')
 
     def build_file(self, parent_id):
         # This will fetch the Docs one by one, concatting them
@@ -249,35 +252,45 @@ class UDS():
             print(tabulate(table, headers=[
                   'Name', 'Size', 'Encoded', 'ID']))
 
-    def erase(self, name, default=1):  # Alpha command to erase file via name
+    def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
         self.update(mode=2)  # Sets update mode
         with open("data.txt", 'r') as list_:
             data_pull = json.load(list_)
+            list_.close()
         id = data_pull[name]
-        self.delete_file(id, name=name)
-        print("\n")
+        if fallback is not None:
+            self.delete_file(fallback, name=name, mode_=mode_)
+        else:
+            self.delete_file(id, name=name, mode_=mode_)
         self.update(mode=default)  # Updates files in data after being altered
 
-    def grab(self, name, default=1):  # Alpha command to pull files via name
+    def grab(self, name, default=1, fallback=None):  # Alpha command to pull files via name
         self.update(mode=default)  # Sets update mode
-        with open("data.txt", 'r') as list_:  # Load ID values based on file name
-            data_pull = json.load(list_)
-        parent_id = data_pull[name]  # Loads ID based on name
-        self.build_file(parent_id)
-        print("\n")
+        if fallback is not None:
+            self.build_file(parent_id=fallback)
+        else:
+            with open("data.txt", 'r') as list_:  # Load ID values based on file name
+                data_pull = json.load(list_)
+            parent_id = data_pull[name]  # Loads ID based on name
+            self.build_file(parent_id)
 
     def batch(self, part, opts=None):  # Alpha command to bulk download based on part of a file name
         self.update(mode=1)  # Sets update mode
         items = self.api.list_files(opts)
         name_space = []  # List of names based on user part
+        id_space = []
+        check = 0
         for item in items:  # Checks if part is in the name of any UDS file and adds them to queue
             if str(part) in str(item.name):  # The name check
                 name_space.append(item.name)
+                id_space.append(item.id_)
+                check += 1
             else:  # Fallback for doing nothing, not necessary, just habit
                 print("", end='')
+        for i in range(check):
+            self.grab(fallback=id_space[i], name=name_space[i], default=2)
         for names in range(len(name_space)):  # Downloads the bulk using data and names
-            name = name_space[names]
-            self.grab(name, default=2)  # Update data, not necessary
+            self.grab(name_space[names], default=2)  # Update data, not necessary
 
     def bunch(self, file_part, path='.'):  # Alpha command to bulk upload files based on file name part
         files = os.listdir(path)  # Make list of all files in directory
@@ -297,14 +310,15 @@ class UDS():
         self.update(mode=2)  # Sets update mode
         items = self.api.list_files(opts)
         name_space = []
+        id_space = []
+        check = 0
         for item in items:  # Add names to list
             if str(part) in str(item.name):  # add names if they have part in them
                 name_space.append(item.name)
-            else:  # Fallback
-                print("", end='')
-        for names in range(len(name_space)):  # Cycle through names and delete files
-            name = name_space[names]
-            self.erase(name, default=2)
+                check += 1
+                id_space.append(item.id_)
+        for i in range(check):
+            self.erase(fallback=id_space[i], name=name_space[i], default=2)
 
     def actions(self, action, args):
         switcher = {
@@ -385,7 +399,7 @@ def main():
                 else:
                     uds.bunch(sys.argv[3])
             else:
-                if len(sys.argv) > 2:
+                if len(sys.argv) > 3:
                     path = str(sys.argv[3])
                     uds.bunch(sys.argv[2], path=path)
                 else:
