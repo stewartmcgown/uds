@@ -226,6 +226,8 @@ class UDS():
                 with open("data.txt", 'w') as data4:  # Write data to data.txt
                     json.dump(user_data, data4, indent=3)
                 table.append(record)
+                with open("User.txt", 'w') as user:
+                    user.write(tabulate(table, headers=['Name', 'Encoded', 'Size', 'ID']))
             if mode == 0:  # Verbose
                 print(tabulate(table, headers=[
                       'Name', 'Encoded', 'Size', 'ID']))
@@ -253,26 +255,27 @@ class UDS():
                   'Name', 'Size', 'Encoded', 'ID']))
 
     def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
-        self.update(mode=2)  # Sets update mode
-        with open("data.txt", 'r') as list_:
-            data_pull = json.load(list_)
-            list_.close()
-        id = data_pull[name]
         if fallback is not None:
             self.delete_file(fallback, name=name, mode_=mode_)
         else:
-            self.delete_file(id, name=name, mode_=mode_)
+            with open("data.txt", 'r') as list_:
+                data_pull = json.load(list_)
+                list_.close()
+            id_ = data_pull[name]
+            self.delete_file(id_, name=name, mode_=mode_)
         self.update(mode=default)  # Updates files in data after being altered
 
     def grab(self, name, default=1, fallback=None):  # Alpha command to pull files via name
         self.update(mode=default)  # Sets update mode
         if fallback is not None:
             self.build_file(parent_id=fallback)
+            print("\n")
         else:
             with open("data.txt", 'r') as list_:  # Load ID values based on file name
                 data_pull = json.load(list_)
             parent_id = data_pull[name]  # Loads ID based on name
             self.build_file(parent_id)
+            print("\n")
 
     def batch(self, part, opts=None):  # Alpha command to bulk download based on part of a file name
         self.update(mode=1)  # Sets update mode
