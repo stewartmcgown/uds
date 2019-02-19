@@ -24,8 +24,8 @@ import cryptography
 import concurrent.futures
 import Format
 import argparse
-import json
 import re
+import json
 
 import Encoder
 
@@ -41,6 +41,7 @@ MAX_DOC_LENGTH = 1000000
 MAX_RAM_MB = 1024
 MAX_WORKERS_ALLOWED = 10
 CHUNK_READ_LENGTH_BYTES = 750000
+
 
 class UDS():
     def __init__(self):
@@ -130,6 +131,7 @@ class UDS():
         # Prepare media file
         size = os.stat(path).st_size
         encoded_size = size * (4/3)
+
         root = self.api.get_base_folder()['id']
 
         media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
@@ -200,71 +202,62 @@ class UDS():
         # An alternative method would be to use partial download headers
         # and convert and upload the parts individually. Perhaps a
         # future release will implement this.
-    def update(self, opts=None):
+    def update(self, mode, opts=None):
         items = self.api.list_files(opts)
 
         if not items:
             print('No UDS files found.')
         else:
-            total = 0
             table = []
-            saved_bytes = 0
+            with open("data.txt", 'w') as init:
+                init.write("{")
+                init.write("}")
             for item in items:
-                match = re.match(r"([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '.']+)(['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',' ']+)", item.encoded_size, re.I)
-                v = match.groups()
-                for i in range(len(v)):
-                    try:
-                        global cus_value
-                        cus_value = float(v[i])
-                    except:
-                        global string_entry
-                        string_entry = str(v[i])
-                value2 = str(float(cus_value) / float(1.3))
-                value3 = value2.split(".")
-                p1 = value3[0]
-                p2 = str(".") + str(value2[2])
-                p3 = p2[:2]
-                v2 = str(p1) + str(p3)
-                if ".." in str(v2):
-                    catch = v2.split("..")
-                    catch2 = str(catch[0]) + str(".0")
-                    v2 = catch2
-                size = v2 + " " + string_entry
-                record = [item.name, item.encoded_size, size, item.id_]
+                record = [item.name, item.encoded_size, item.size]
+                with open("data.txt", 'r') as data3:
+                    user_data = json.load(data3)
+                temp_name = str(item.name)
+                user_data[temp_name] = item.id_
+                with open("data.txt", 'w') as data4:
+                    json.dump(user_data, data4, indent=3)
                 table.append(record)
-                print(value2)
-                #print(table)
+            if mode != 0:
+                print(tabulate(table, headers=[
+                      'Name', 'Encoded', 'Size']))
+            else:
+                print(("Update Complete!\n"))
 
-            print(tabulate(table, headers=[
-                  'Name', 'Encoded', 'Size', 'ID']))
-
-    def actions(self, action, args):
-        switcher = {
-            "list": self.list,
-            "push": self.do_chunked_upload,
-            "pull": self.build_file,
-            "delete": self.delete_file
-        }
-
-        switcher.get(action)(args)
     def list(self, opts=None):
         items = self.api.list_files(opts)
 
         if not items:
             print('No UDS files found.')
-            
         else:
             #print('\nUDS Files in Drive:')
-            total = 0
             table = []
-            saved_bytes = 0
             for item in items:
                 record = [item.name, item.size,
-                          item.encoded_size, item.id_, item.shared]
+                          item.encoded_size, item.id_]
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID', 'Shared']))
+                  'Name', 'Size', 'Encoded', 'ID']))
+
+    def erase(self, name):
+        self.update(0)
+        with open("data.txt", 'r') as list:
+            data_pull = json.load(list)
+        id = data_pull[name]
+        self.delete_file(id)
+        print("\n")
+
+    def grab(self, name):
+        self.update(0)
+        with open("data.txt", 'r') as list:
+            data_pull = json.load(list)
+        parent_id = data_pull[name]
+        self.build_file(parent_id)
+        print("\n")
 
     def actions(self, action, args):
         switcher = {
@@ -317,9 +310,11 @@ def main():
     options = """
     push     Uploads a file from this computer [path_to_file]
     pull     Downloads a UDS file [id]
+    grab     Downloads a UDS file [name]
     list     Finds all UDS files
     update   Update cached UDS data
     delete   Deletes a UDS file [id]
+    erase    Deletes a UDS file [name]
     """
 
     if len(sys.argv) > 1:
@@ -333,10 +328,14 @@ def main():
             uds.do_chunked_upload(file_path)
         elif command == "pull":
             uds.build_file(sys.argv[2])
+        elif command == "grab":
+            uds.grab(sys.argv[2])
         elif command == "list":
             uds.list()
         elif command == "update":
-            uds.update()
+            uds.update(1)
+        elif command == "delete":
+            uds.delete_file(sys.argv[2])
         elif command == "convert":
             if sys.argv[2] == "--delete":
                 DELETE_FILE_AFTER_CONVERT = True
