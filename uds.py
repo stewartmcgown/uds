@@ -336,6 +336,8 @@ def main():
             uds.update(1)
         elif command == "delete":
             uds.delete_file(sys.argv[2])
+        elif command == "erase":
+            uds.erase(sys.argv[2])
         elif command == "convert":
             if sys.argv[2] == "--delete":
                 DELETE_FILE_AFTER_CONVERT = True
