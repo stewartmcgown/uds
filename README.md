@@ -39,6 +39,22 @@ Name                      Size   Encoded    ID
 Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 ```
 
+### Update
+
+```sh
+> python uds.py update
+
+Name       Encoded   Size 
+---------  --------  -----
+file_name  1.1 GB    810 MB 
+
+"data.txt"
+{
+   "file0": "1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8"
+   "file2": "1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms9"
+}
+```
+
 ### Download
 
 ```sh
@@ -46,11 +62,27 @@ Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Downloaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
 
+### Grab
+
+```sh
+> python uds.py grab file_name
+Update Successful!
+Downloaded file_name: [██████████████████████████████] 100%
+```
+
 ### Delete
 
 ```sh
 > python uds.py delete 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Deleted 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
+```
+
+### Erase
+
+```sh
+>python uds.py erase file_name
+Update Successful!
+Deleted file_name
 ```
 
 **Compatible with Python 3.**
