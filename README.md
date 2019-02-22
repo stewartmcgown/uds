@@ -32,6 +32,13 @@ Created parent folder with ID 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Successfully Uploaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
 
+```
+[Layout]
+python uds.py psuh argument
+
+argument: Path_to_file+file_name
+```
+
 ### List
 
 ```sh
@@ -41,6 +48,13 @@ Name                      Size   Encoded    ID
 Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 ```
 
+```
+[Layout]
+python uds.py list
+
+arguments: None
+```
+
 ### Download
 
 ```sh
@@ -48,11 +62,25 @@ Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB     1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Downloaded Ubuntu.Desktop.16.04.iso: [██████████████████████████████] 100%
 ```
 
+```
+[Layout]
+python uds.py pull argument
+
+argument: id_of_file
+```
+
 ### Delete
 
 ```sh
 > python uds.py delete 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Deleted 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
+```
+
+```
+[Layout]
+python uds.py delete argument
+
+argument: id_of_file
 ```
 ## Alpha Extensions
 
@@ -62,9 +90,15 @@ Deleted 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 ```sh
 > python uds.py grab test.7z
 Update Successful!
-Downloaded ftest.7z: [██████████████████████████████] 100%
+Downloaded test.7z: [██████████████████████████████] 100%
 ```
 
+```
+[Layout]
+python uds.py grab argument
+
+argument: name_of_file
+```
 
 ### Erase
 
@@ -72,6 +106,13 @@ Downloaded ftest.7z: [███████████████████�
 >python uds.py erase test2.7z
 Update Successful!
 Deleted test2.7z
+```
+
+```
+[Layout]
+python uds.py erase argument
+
+argument: name_of_file
 ```
 
 ### Update
@@ -95,6 +136,13 @@ file_name  1.1 GB    810 MB
 }
 ```
 
+```
+[Layout]
+python uds.py update
+
+arguments: None
+```
+
 ## Bulk Extensions
 
 ### Bunch
@@ -103,7 +151,7 @@ file_name  1.1 GB    810 MB
 > python uds.py bunch test
 test.7z.1 will require 1337 Docs to store.
 Created parent folder with ID 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAm12
-Successfully Uploaded test..7z.1: [██████████████████████████████] 100%
+Successfully Uploaded test.7z.1: [██████████████████████████████] 100%
 test.7z.2 will require 1337 Docs to store.
 Created parent folder with ID 1fc6JGpX6vUWiwflL1jBxM1YpuQQFAm12
 Successfully Uploaded test.7z.2: [██████████████████████████████] 100%
@@ -112,25 +160,47 @@ Created parent folder with ID 1fc6JGpX6vTOiwflL1jBxM1YpuQQFAm12
 Successfully Uploaded test.7z.3: [██████████████████████████████] 100%
 ```
 
+```
+[Layout]
+python uds.py bunch argument[1] argument[2]
+
+argument[1]: name_in_files, or wildcard "?" without quotes
+argument[2]: directory, defualt is current directory of UDS
+```
+
 
 ### Batch
 
 ```sh
-> python uds.py grab file_name
+> python uds.py batch file_name
 Update Successful!
 Downloaded file_name.7z.1: [██████████████████████████████] 100%
 Downloaded file_name.7z.2: [██████████████████████████████] 100%
 Downloaded file_name.7z.3: [██████████████████████████████] 100%
 ```
 
+```
+[Layout]
+python uds.py batch argument
+
+arguments: name_in_files, or wildcard "?" without quotes
+```
+
 ### Wipe
 
 ```sh
->python uds.py erase file
+>python uds.py wipe file
 Update Successful!
 Deleted file.7z.1
 Deleted file.7z.2
 Deleted file.7z.3
+```
+
+```
+[Layout]
+python uds.py wipe argument
+
+arguments: name_in_files, or wildcard "?" without quotes
 ```
 
 
