@@ -418,7 +418,7 @@ def main():
                 file_path = sys.argv[2]
             uds.do_chunked_upload(file_path)
         elif command == "bunch":
-            if sys.argv[2] == "--disabale-multi":
+            if sys.argv[2] == "--disable-multi":
                 USE_MULTITHREADED_UPLOADS = False
                 if len(sys.argv) > 3:
                     path = str(sys.argv[4])
