@@ -274,11 +274,11 @@ class UDS():
             table = []
             for item in items:
                 record = [item.name, item.size,
-                          item.encoded_size, item.id_, item.sha256]
+                          item.encoded_size, item.id_]
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID', 'SHA256']))
+                  'Name', 'Size', 'Encoded', 'ID',]))
 
     def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
         if fallback is not None:
