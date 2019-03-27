@@ -91,7 +91,8 @@ class GoogleAPI():
                 'uds': 'true',
                 'size': media.size,
                 'size_numeric': media.size_numeric,
-                'encoded_size': media.encoded_size
+                'encoded_size': media.encoded_size,
+                'sha256': media.sha256
             },
             'parents': media.parents
         }
@@ -104,7 +105,7 @@ class GoogleAPI():
     def list_files(self, opts=None):
         # Call the Drive v3 API
         results = self.service.files().list(
-            q="properties has {key='uds' and value='true'} and trashed=false",
+            q="fullText contains '%s' and properties has {key='uds' and value='true'} and trashed=false" % opts,
             pageSize=1000,
             fields="nextPageToken, files(id, name, properties, mimeType)").execute()
 
@@ -122,7 +123,8 @@ class GoogleAPI():
                 size_numeric=props.get("size_numeric"),
                 encoded_size=props.get("encoded_size"),
                 id=f.get("id"),
-                shared=props.get("shared")
+                shared=props.get("shared"),
+                sha256=props.get("sha256")
             ))
 
         return files
@@ -159,7 +161,7 @@ class GoogleAPI():
             raise FileNotFoundException()
 
     def get_file(self, id):
-        return self.service.files().get(fileId=id).execute()
+        return self.service.files().get(fileId=id, fields="*").execute()
 
     def export_media(self, id):
         return self.service.files().export_media(fileId=id, mimeType='text/plain')

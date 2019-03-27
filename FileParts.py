@@ -1,5 +1,5 @@
 class UDSFile(object):
-    def __init__(self, name, base64, mime, size, encoded_size,  id=None, parents=['root'], size_numeric=None, shared=False):
+    def __init__(self, name, base64, mime, size, encoded_size,  id=None, parents=['root'], size_numeric=None, shared=False, sha256=''):
         self.name = name
         self.base64 = base64
         self.mime = mime
@@ -9,6 +9,7 @@ class UDSFile(object):
         self.parents = parents
         self.id_ = id
         self.shared = shared
+        self.sha256 = sha256
 
 
 class Chunk():

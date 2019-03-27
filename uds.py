@@ -26,6 +26,7 @@ import Format
 import argparse
 import re
 import json
+import hashlib
 
 import Encoder
 
@@ -47,7 +48,16 @@ class UDS():
     def __init__(self):
         self.api = GoogleAPI()
 
-    def delete_file(self, id, name=None, mode_=None):  # Added argument name for commands using name argument
+    def delete_file(self, id, name=None, mode_=None):
+        """Deletes a given file
+
+        Use the Google Drive API to delete a file given its ID. 
+
+        Args:
+            id (str): ID of the file
+            name (str): Name of the file
+
+        """
         try:
             self.api.delete_file(id)
             if name is not None:
@@ -70,31 +80,38 @@ class UDS():
 
         if not items:
             print('No parts found.')
-        else:
-            # Fix part as int
-            for item in items:
-                item['properties']['part'] = int(item['properties']['part'])
+            return
+            
+        # Fix part as int
+        for item in items:
+            item['properties']['part'] = int(item['properties']['part'])
 
-            #print('Parts of %s:' % folder['name'])
-            items.sort(key=lambda x: x['properties']['part'], reverse=False)
+        #print('Parts of %s:' % folder['name'])
+        items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
-            f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
+        f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
 
-            for i, item in enumerate(items):
-                #print('%s (%s)' % (item['properties']['part'], item['id']))
-                progress_bar("Downloading %s" % folder['name'], i, len(items))
+        for i, item in enumerate(items):
+            progress_bar("Downloading %s" % folder['name'], i, len(items))
 
-                encoded_part = self.download_part(item['id'])
+            encoded_part = self.download_part(item['id'])
 
-                # Decode
-                decoded_part = Encoder.decode(encoded_part)
+            # Decode
+            decoded_part = Encoder.decode(encoded_part)
 
-                # Append decoded part to file
-                f.write(decoded_part)
+            # Append decoded part to file
+            f.write(decoded_part)
 
-            f.close()
+        file_hash = self.hash_file(f.name)
 
-            progress_bar("Downloaded %s" % folder['name'], 1, 1)
+        f.close()
+
+        original_hash = folder.get("properties").get("sha256")
+        if (file_hash != original_hash and original_hash is not None):
+            print("Failed to verify hash\nDownloaded file had hash %s compared to original %s", (file_hash[:9], original_hash[:9]))
+            os.remove(f.name)
+
+        progress_bar("Downloaded %s" % folder['name'], 1, 1)
 
     def download_part(self, part_id):
         request = self.api.export_media(part_id)
@@ -136,12 +153,14 @@ class UDS():
     def do_chunked_upload(self, path):
         # Prepare media file
         size = os.stat(path).st_size
+        file_hash = self.hash_file(path)
+
         encoded_size = size * (4/3)
 
         root = self.api.get_base_folder()['id']
 
         media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size)
+                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, sha256=file_hash)
 
         parent = self.api.create_media_folder(media)
         print(" Created parent folder with ID %s" % (parent['id']))
@@ -239,6 +258,14 @@ class UDS():
             print("", end='')
 
     def list(self, opts=None):
+        """List UDS files
+
+        Prints a list of all UDS files. If a query is given, only the files
+        that match that query will be printed.
+
+        Args:
+            opts (str): Command line arguments
+        """
         items = self.api.list_files(opts)
 
         if not items:
@@ -248,11 +275,11 @@ class UDS():
             table = []
             for item in items:
                 record = [item.name, item.size,
-                          item.encoded_size, item.id_]
+                          item.encoded_size, item.id_, item.sha256]
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID']))
+                  'Name', 'Size', 'Encoded', 'ID', 'SHA256']))
 
     def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
         if fallback is not None:
@@ -343,9 +370,18 @@ class UDS():
         for i in range(check):
             self.erase(fallback=id_space[i], name=name_space[i], default=2)
 
-    def hash_file(self) {
+    def hash_file(self, path):
+        sha = hashlib.sha256()
 
-    }
+        with open(path, 'rb') as f:
+            while True:
+                data = f.read(CHUNK_READ_LENGTH_BYTES)
+                if not data:
+                    break
+                sha.update(data)
+
+        return sha.hexdigest()
+    
 
     def actions(self, action, args):
         switcher = {
@@ -438,7 +474,7 @@ def main():
         elif command == "batch":
             uds.batch(sys.argv[2])
         elif command == "list":
-            uds.list()
+            uds.list(sys.argv[2])
         elif command == "update":
             uds.update()
         elif command == "delete":
