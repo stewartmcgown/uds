@@ -163,7 +163,6 @@ class UDS():
                         Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, sha256=file_hash)
 
         parent = self.api.create_media_folder(media)
-        print(" Created parent folder with ID %s" % (parent['id']))
 
         # Should be the same
         no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
@@ -437,7 +436,7 @@ def main():
     pull     Downloads a UDS file [id]
     batch    Downloads UDS files [word_in_file]
     grab     Downloads a UDS file [name]
-    list     Finds all UDS files
+    list     Finds all UDS files [query]
     update   Update cached UDS data
     delete   Deletes a UDS file [id]
     erase    Deletes a UDS file [name]
