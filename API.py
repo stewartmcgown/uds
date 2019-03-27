@@ -102,15 +102,26 @@ class GoogleAPI():
 
         return file
 
-    def list_files(self, opts=None):
-        query = "properties has {key='uds' and value='true'} and trashed=false"
+    def list_files(self, query=None):
+        """List all UDS files
 
-        if (opts is not None):
-            query += " and name contains '%s'" % opts
+        Search the user's drive for all UDS files. Optionally, give a query parameter to
+        return only files matching that.
+
+        Args:
+            query (str): Search for this query
+        
+        Returns:
+            list: containing files matching the search
+        """
+        q = "properties has {key='uds' and value='true'} and trashed=false"
+
+        if (query is not None):
+            q += " and name contains '%s'" % query
 
         # Call the Drive v3 API
         results = self.service.files().list(
-            q=query,
+            q=q,
             pageSize=1000,
             fields="nextPageToken, files(id, name, properties, mimeType)").execute()
 
