@@ -103,9 +103,14 @@ class GoogleAPI():
         return file
 
     def list_files(self, opts=None):
+        query = "properties has {key='uds' and value='true'} and trashed=false"
+
+        if (opts is not None):
+            query += " and name contains '%s'" % opts
+
         # Call the Drive v3 API
         results = self.service.files().list(
-            q="fullText contains '%s' and properties has {key='uds' and value='true'} and trashed=false" % opts,
+            q=query,
             pageSize=1000,
             fields="nextPageToken, files(id, name, properties, mimeType)").execute()
 

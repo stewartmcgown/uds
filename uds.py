@@ -212,7 +212,7 @@ class UDS():
 
         progress_bar("Uploaded %s in %ss" %
                      (media.name, finish_time), 1, 1)
-
+        print("\n")
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
         print(tabulate(table, headers=[
@@ -423,7 +423,8 @@ def progress_bar(title, value, endvalue, bar_length=30):
         value = endvalue
 
     sys.stdout.write(
-        "\r"+title+": [{0}] {1}%     ".format(arrow + spaces, int(round(percent * 100))))
+        "\r"+title+": [{0}] {1}%            "
+            .format(arrow + spaces, int(round(percent * 100))))
     sys.stdout.flush()
 
 
@@ -484,7 +485,8 @@ def main():
         elif command == "batch":
             uds.batch(sys.argv[2])
         elif command == "list":
-            uds.list(sys.argv[2])
+            arg = sys.argv[2] if len(sys.argv) > 2 else None
+            uds.list(arg)
         elif command == "update":
             uds.update()
         elif command == "delete":
