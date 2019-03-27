@@ -343,6 +343,10 @@ class UDS():
         for i in range(check):
             self.erase(fallback=id_space[i], name=name_space[i], default=2)
 
+    def hash_file(self) {
+
+    }
+
     def actions(self, action, args):
         switcher = {
             "list": self.list,
@@ -414,7 +418,7 @@ def main():
                 file_path = sys.argv[2]
             uds.do_chunked_upload(file_path)
         elif command == "bunch":
-            if sys.argv[2] == "--disbale-multi":
+            if sys.argv[2] == "--disabale-multi":
                 USE_MULTITHREADED_UPLOADS = False
                 if len(sys.argv) > 3:
                     path = str(sys.argv[4])
