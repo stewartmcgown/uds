@@ -71,9 +71,15 @@ class UDS():
                 print("", end='')
 
     def build_file(self, parent_id):
-        # This will fetch the Docs one by one, concatting them
-        # to a local base64 file. The file will then be converted
-        # from base64 to the appropriate mimetype
+        """Download a uds file
+
+        This will fetch the Docs one by one, concatting them
+        to a local base64 file. The file will then be converted
+        from base64 to the appropriate mimetype.
+
+        Args:
+            parent_id (str): The ID of the containing folder
+        """
         items = self.api.recursive_list_folder(parent_id)
 
         folder = self.api.get_file(parent_id)
@@ -167,8 +173,8 @@ class UDS():
         # Should be the same
         no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
-        print("Requires %s chunks to read and %s docs to store." %
-              (no_chunks, no_docs))
+
+        
 
         # Append all chunks to chunk list
         chunk_list = list()
@@ -206,6 +212,11 @@ class UDS():
 
         progress_bar("Uploaded %s in %ss" %
                      (media.name, finish_time), 1, 1)
+
+        # Print new file output
+        table = [[media.name, media.size, media.encoded_size, parent['id']]]
+        print(tabulate(table, headers=[
+                  'Name', 'Size', 'Encoded', 'ID',]))
 
     def convert_file(self, file_id):
         # Get file metadata
@@ -412,7 +423,7 @@ def progress_bar(title, value, endvalue, bar_length=30):
         value = endvalue
 
     sys.stdout.write(
-        "\r"+title+": [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
+        "\r"+title+": [{0}] {1}%     ".format(arrow + spaces, int(round(percent * 100))))
     sys.stdout.flush()
 
 
