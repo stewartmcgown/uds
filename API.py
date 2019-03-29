@@ -51,7 +51,12 @@ class GoogleAPI():
         return self.service
 
     def get_base_folder(self):
-        # Look for existing folder
+        """Locate the base UDS folder
+
+        Returns:
+            file: the file 
+
+        """
         results = self.service.files().list(
             q="properties has {key='udsRoot' and value='true'} and trashed=false",
             pageSize=1,
@@ -65,8 +70,12 @@ class GoogleAPI():
         else:
             print("%s Multiple UDS Roots found." % GoogleAPI.ERROR_OUTPUT)
 
-    # Creates the base UDS folder and hides it from the user's drive
     def create_root_folder(self):
+        """Creates the base UDS folder and hides it from the user's drive
+
+        Returns:
+            str: id of the new folder
+        """
         root_meta = {
             'name': "UDS Root",
             'mimeType': 'application/vnd.google-apps.folder',
@@ -78,12 +87,16 @@ class GoogleAPI():
                                                   fields='id').execute()
 
         # Hide this folder
-        self.service.files().update(fileId=root_folder['id'],
-                                    removeParents='root').execute()
+        self.hide_file(root_folder['id'])
 
         return root_folder
 
     def create_media_folder(self, media):
+        """Create a UDS media folder
+
+        Args:
+            media (UDSFile): the file to create for
+        """
         file_metadata = {
             'name': media.name,
             'mimeType': 'application/vnd.google-apps.folder',
@@ -146,6 +159,15 @@ class GoogleAPI():
         return files
 
     def recursive_list_folder(self, parent_id, token=None):
+        """Recursively list a folder
+
+        Creates a flat array of a folders contents, with all children being present on the 
+        top level.
+
+        Args:
+            parent_id (str): ID of the root node to list from
+            token (str, optional): Token to use for starting page
+        """
         all_parts = []
 
         while True:
@@ -165,6 +187,18 @@ class GoogleAPI():
         return all_parts
 
     def delete_file(self, id):
+        """Delete a UDS file
+        
+        Attempts to delete a file at a given ID.
+
+        Args:
+            id (str): ID of the file
+
+        Raises:
+            FileNotUDSException: If the file is found, but is not of type UDS
+            FileNotFoundException: If the ID does not exist.
+
+        """
         # Ensure the file is a UDS one
         try:
             info = self.service.files().get(fileId=id, fields="*").execute()
@@ -182,18 +216,13 @@ class GoogleAPI():
     def export_media(self, id):
         return self.service.files().export_media(fileId=id, mimeType='text/plain')
 
-    def test_upload(self):
-        file_metadata = {
-            'name': "TestUDS",
-            'mimeType': 'text/plain',
-        }
-
-        mediaio_file = MediaIoBaseUpload(io.StringIO("hello"),
-                                         mimetype='text/plain')
-
-        self.service.files().create(body=file_metadata, media_body=mediaio_file).execute()
-
     def upload_single_file(self, media_file, file_metadata):
+        """Uploads a single file to the Drive
+
+        Args:
+            media_file (MediaBody): The file to upload
+            file_metadata (dict): metadata for the file
+        """
         while True:
             try:
                 file = self.service.files().create(body=file_metadata,
@@ -208,3 +237,11 @@ class GoogleAPI():
                 continue
 
         return file, file_metadata
+
+    def hide_file(self, id):
+        """Hide a given file
+
+        Removes the parents of the file so it no longer shows up in the user's drive.
+        """
+        self.service.files().update(fileId=id,
+                                    removeParents='root').execute()
