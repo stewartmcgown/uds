@@ -1,33 +1,22 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.http import MediaIoBaseUpload
-from googleapiclient.http import MediaIoBaseDownload
-from httplib2 import Http
-from oauth2client import file, client, tools
 from mimetypes import MimeTypes
-from tabulate import tabulate
-from io import StringIO
-
 import sys
-import base64
 import math
 import urllib.request
-import ntpath
 import mmap
 import io
 import os
 import time
-import shutil
-import cryptography
-import concurrent.futures
-import Format
 import argparse
-import re
 import json
 import hashlib
+import ntpath
 
+from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseDownload
+from tabulate import tabulate
+
+import Format
 import Encoder
 
 from FileParts import UDSFile, Chunk
@@ -51,7 +40,7 @@ class UDS():
     def delete_file(self, id, name=None, mode_=None):
         """Deletes a given file
 
-        Use the Google Drive API to delete a file given its ID. 
+        Use the Google Drive API to delete a file given its ID.
 
         Args:
             id (str): ID of the file
@@ -61,14 +50,13 @@ class UDS():
         try:
             self.api.delete_file(id)
             if name is not None:
-                print("Deleted %s" % name)  # If Alpha commands are used, this displays the name
+                print("Deleted {!s}".format(name))  # If Alpha commands are used, this displays the name
             else:
-                print("Deleted %s" % id)  # If UDS commands are used, this displays the ID
+                print("Deleted {!s}".format(id))  # If UDS commands are used, this displays the ID
         except:
             if mode_ != "quiet":
-                print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
-            else:
-                print("", end='')
+                print("{!s} File was not a UDS file".format(GoogleAPI.ERROR_OUTPUT))
+
 
     def build_file(self, parent_id):
         """Download a uds file
@@ -87,7 +75,7 @@ class UDS():
         if not items:
             print('No parts found.')
             return
-            
+
         # Fix part as int
         for item in items:
             item['properties']['part'] = int(item['properties']['part'])
@@ -95,29 +83,26 @@ class UDS():
         #print('Parts of %s:' % folder['name'])
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
-        f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
+        with open('/'.join([get_downloads_folder(), folder['name']]), "wb") as f:
+            for i, item in enumerate(items):
+                progress_bar("Downloading {!s}".format(folder['name']), i, len(items))
+                encoded_part = self.download_part(item['id'])
 
-        for i, item in enumerate(items):
-            progress_bar("Downloading %s" % folder['name'], i, len(items))
+                # Decode
+                decoded_part = Encoder.decode(encoded_part)
 
-            encoded_part = self.download_part(item['id'])
+                # Append decoded part to file
+                f.write(decoded_part)
 
-            # Decode
-            decoded_part = Encoder.decode(encoded_part)
-
-            # Append decoded part to file
-            f.write(decoded_part)
-
-        file_hash = self.hash_file(f.name)
-
-        f.close()
+            file_hash = self.hash_file(f.name)
 
         original_hash = folder.get("properties").get("sha256")
-        if (file_hash != original_hash and original_hash is not None):
-            print("Failed to verify hash\nDownloaded file had hash %s compared to original %s", (file_hash[:9], original_hash[:9]))
+        if original_hash is not None and file_hash != original_hash:
+            print("Failed to verify hash")
+            print("Downloaded file had hash {!s} compared to original {!s}".format(file_hash[:9], original_hash[:9]))
             os.remove(f.name)
 
-        progress_bar("Downloaded %s" % folder['name'], 1, 1)
+        progress_bar("Downloaded {!s}".format(folder['name']), 1, 1)
 
     def download_part(self, part_id):
         request = self.api.export_media(part_id)
@@ -134,7 +119,7 @@ class UDS():
             api = self.api
         #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
-        with open(chunk.path, "r") as fd:
+        with open(chunk.path) as fd:
             mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
             chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
@@ -165,8 +150,14 @@ class UDS():
 
         root = self.api.get_base_folder()['id']
 
-        media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, sha256=file_hash)
+        media = UDSFile(ntpath.basename(path),
+                        None,
+                        MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
+                        Format.format(size),
+                        Format.format(encoded_size),
+                        parents=[root],
+                        size_numeric=size,
+                        sha256=file_hash)
 
         parent = self.api.create_media_folder(media)
 
@@ -174,7 +165,7 @@ class UDS():
         no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
-        
+
 
         # Append all chunks to chunk list
         chunk_list = list()
@@ -195,28 +186,27 @@ class UDS():
             elapsed_time = round(time.time() - start_time, 2)
             current_speed = round(
                 (total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
-            progress_bar("Uploading %s at %sMB/s" %
-                         (media.name, current_speed), total, total_chunks)
+            progress_bar("Uploading {!s} at {!s}MB/s".format(media.name, current_speed),
+                         total,
+                         total_chunks)
 
-        """# Concurrently execute chunk upload and report back when done.
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
-            for file in executor.map(ext_upload_chunked_part, chunk_list):
-                total = total + file
-                elapsed_time = round(time.time() - start_time, 2)
-                current_speed = round(
-                    (total) / (elapsed_time * 1024 * 1024), 2)
-                progress_bar("Uploading %s at %sMB/s" %
-                             (media.name, current_speed), total, size)"""
+        # Concurrently execute chunk upload and report back when done.
+        #with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+        #    for file in executor.map(ext_upload_chunked_part, chunk_list):
+        #        total = total + file
+        #        elapsed_time = round(time.time() - start_time, 2)
+        #        current_speed = round(
+        #            (total) / (elapsed_time * 1024 * 1024), 2)
+        #        progress_bar("Uploading %s at %sMB/s" %
+        #                     (media.name, current_speed), total, size)
 
         finish_time = round(time.time() - start_time, 1)
 
-        progress_bar("Uploaded %s in %ss" %
-                     (media.name, finish_time), 1, 1)
+        progress_bar("Uploaded {!s} in {!s}s".format(media.name, finish_time), 1, 1)
         print("\n")
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
-        print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID',]))
+        print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID',]))
 
     def convert_file(self, file_id):
         # Get file metadata
@@ -224,14 +214,14 @@ class UDS():
 
         # Download the file and then call do_upload() on it
         request = service.files().get_media(fileId=file_id)
-        path = "%s/%s" % (get_downloads_folder(), metadata['name'])
+        path = '/'.join([get_downloads_folder(), metadata['name']])
         fh = io.FileIO(path, "wb")
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while done is False:
             status, done = downloader.next_chunk()
 
-        print("Downloaded %s" % metadata['name'])
+        print("Downloaded {!s}".format(metadata['name']))
         do_upload(path, service)
 
         # An alternative method would be to use partial download headers
@@ -258,14 +248,9 @@ class UDS():
                 with open("User.txt", 'w') as user:
                     user.write(tabulate(table, headers=['Name', 'Encoded', 'Size', 'ID']))
             if mode == 0:  # Verbose
-                print(tabulate(table, headers=[
-                      'Name', 'Encoded', 'Size', 'ID']))
+                print(tabulate(table, headers=['Name', 'Encoded', 'Size', 'ID']))
             elif mode == 1:  # Notify
                 print("Data Updated!\n")
-            else:  # Silent Catch
-                print("", end='')
-        else:
-            print("", end='')
 
     def list(self, opts=None):
         """List UDS files
@@ -288,8 +273,7 @@ class UDS():
                           item.encoded_size, item.id_]
                 table.append(record)
 
-            print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID',]))
+            print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID',]))
 
     def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
         if fallback is not None:
@@ -308,7 +292,7 @@ class UDS():
             self.build_file(parent_id=fallback)
             print("\n")
         else:
-            with open("data.txt", 'r') as list_:  # Load ID values based on file name
+            with open("data.txt") as list_:  # Load ID values based on file name
                 data_pull = json.load(list_)
             parent_id = data_pull[name]  # Loads ID based on name
             self.build_file(parent_id)
@@ -321,18 +305,14 @@ class UDS():
         id_space = []
         check = 0
         for item in items:  # Checks if part is in the name of any UDS file and adds them to queue
-            if str(part) is not "?":
+            if str(part) != "?":
                 if str(part) in str(item.name):  # The name check
                     name_space.append(item.name)
                     id_space.append(item.id_)
                     check += 1
-                else:
-                    print("", end='')
-            elif str(part) is "?":
+            elif str(part) == "?":
                 name_space.append(item.name)
                 id_space.append(item.id_)
-            else:  # Fallback for doing nothing, not necessary, just habit
-                print("", end='')
         for i in range(check):
             self.grab(fallback=id_space[i], name=name_space[i], default=2)
         for names in range(len(name_space)):  # Downloads the bulk using data and names
@@ -345,14 +325,10 @@ class UDS():
             if file_part is not "?":
                 if file_part in name:  # Checks if part is in any files and adds to list
                     files_upload.append(name)
-                else:
-                    print("", end='')
-            elif file_part is "?":
+            elif file_part == "?":
                 files_upload.append(name)
-            else:  # Fallback
-                print("", end='')
         for name_data in range(len(files_upload)):  # Upload all files put in list
-            full_path = str(path) + "/" + str(files_upload[name_data])
+            full_path = ''.join([str(path), str(files_upload[name_data])])
             self.do_chunked_upload(full_path)
         print("\n")
         self.update(mode=1)  # Necessary update to data
@@ -369,8 +345,6 @@ class UDS():
                     name_space.append(item.name)
                     check += 1
                     id_space.append(item.id_)
-                else:
-                    print("", end='')
             elif str(part) is "?":
                 name_space.append(item.name)
                 check += 1
@@ -391,7 +365,7 @@ class UDS():
                 sha.update(data)
 
         return sha.hexdigest()
-    
+
 
     def actions(self, action, args):
         switcher = {
@@ -422,14 +396,14 @@ def progress_bar(title, value, endvalue, bar_length=30):
     if value > endvalue:
         value = endvalue
 
-    sys.stdout.write(
-        "\r"+title+": [{0}] {1}%            "
-            .format(arrow + spaces, int(round(percent * 100))))
+    sys.stdout.write("\r"+title+": [{0}] {1}%            ".format(
+        arrow + spaces,
+        int(round(percent * 100))))
     sys.stdout.flush()
 
 
 def write_status(status):
-    sys.stdout.write("\r%s" % status)
+    sys.stdout.write("\r{!s}".format(status))
     sys.stdout.flush()
 
 
@@ -515,7 +489,7 @@ def ext_upload_chunked_part(chunk):
     api = GoogleAPI()
     #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
-    with open(chunk.path, "r") as fd:
+    with open(chunk.path) as fd:
         mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
         chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
@@ -539,7 +513,7 @@ def ext_upload_chunked_part(chunk):
 
 
 if __name__ == '__main__':
-    if (sys.version_info[0] < 3):
-        print("%s You must use Python 3+" % GoogleAPI.ERROR_OUTPUT)
+    if sys.version_info[0] < 3:
+        print("{!s} You must use Python 3+".format(GoogleAPI.ERROR_OUTPUT))
     else:
         main()
