@@ -50,7 +50,7 @@ Ubuntu.Desktop.18.10.iso  1.1 GB  1.3 GB    1RzzVfN9goHMTkM1Hf1FUWUVS_2R3GK7D
 
 Also supports searching with a query!
 
-> python uds.py list "16"
+> python uds.py list "18"
 Name                      Size   Encoded    ID
 ------------------------  -----  ---------  ---------------------------------  
 Ubuntu.Desktop.18.10.iso  1.1 GB  1.3 GB    1RzzVfN9goHMTkM1Hf1FUWUVS_2R3GK7D
