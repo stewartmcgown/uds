@@ -34,7 +34,7 @@ Successfully Uploaded Ubuntu.Desktop.16.04.iso: [██████████�
 
 ```
 [Layout]
-python uds.py psuh argument
+python uds.py push argument
 
 argument: Path_to_file+file_name
 ```
