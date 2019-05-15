@@ -11,6 +11,8 @@ sorry @ the guys from google internal forums who are looking at this
 
 ### Logic
 
+- Google Docs take up 0 bytes of quota in your Google Drive
+- Split up binary files into Google Docs, with base64 encoded text
 - Size of the encoded file is always larger than the original. Base64 encodes binary data to a ratio of about 4:3.
 - A single google doc can store about a million characters. This is around 710KB of base64 encoded data.
 - Some experiments with multithreading the uploads, but there was no significant performance increase.
