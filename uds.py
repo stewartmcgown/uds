@@ -27,6 +27,7 @@ import argparse
 import re
 import json
 import hashlib
+from tqdm import tqdm
 
 import Encoder
 
@@ -98,14 +99,18 @@ class UDS():
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
         f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
+        progress_bar_chunks = tqdm(total=len(items),
+                            unit='chunks', dynamic_ncols=True,position=0)
+        progress_bar_speed = tqdm(total=len(items)* CHUNK_READ_LENGTH_BYTES,unit_scale=1,
+                            unit='B', dynamic_ncols=True,position=1)   
 
         for i, item in enumerate(items):
-            progress_bar("Downloading %s" % folder['name'], i, len(items))
-
             encoded_part = self.download_part(item['id'])
 
             # Decode
             decoded_part = Encoder.decode(encoded_part)
+            progress_bar_chunks.update(1)
+            progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
 
             # Append decoded part to file
             f.write(decoded_part)
@@ -184,21 +189,18 @@ class UDS():
                 Chunk(path, i, size, media=media, parent=parent['id'])
             )
 
-        # Begin timing run
-        start_time = time.time()
-
         total = 0
         total_chunks = len(chunk_list)
-
+        progress_bar_chunks = tqdm(total=total_chunks,
+                            unit='chunks', dynamic_ncols=True,position=0)
+        progress_bar_speed = tqdm(total=total_chunks* CHUNK_READ_LENGTH_BYTES,unit_scale=1,
+                            unit='B', dynamic_ncols=True,position=1)                    
+        
         for chunk in chunk_list:
-            total = total + 1
+            total += 1
             self.upload_chunked_part(chunk)
-            elapsed_time = round(time.time() - start_time, 2)
-            current_speed = round(
-                (total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
-            progress_bar("Uploading %s at %sMB/s" %
-                         (media.name, current_speed), total, total_chunks)
-
+            progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
+            progress_bar_chunks.update(1)
         """# Concurrently execute chunk upload and report back when done.
         with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
             for file in executor.map(ext_upload_chunked_part, chunk_list):
@@ -209,10 +211,8 @@ class UDS():
                 progress_bar("Uploading %s at %sMB/s" %
                              (media.name, current_speed), total, size)"""
 
-        finish_time = round(time.time() - start_time, 1)
+        
 
-        progress_bar("Uploaded %s in %ss" %
-                     (media.name, finish_time), 1, 1)
         print("\n")
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
