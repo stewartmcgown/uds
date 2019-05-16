@@ -40,7 +40,7 @@ class GoogleAPI():
                 flow = client.flow_from_clientsecrets(
                     GoogleAPI.CLIENT_SECRET, SCOPES)
                 creds = tools.run_flow(flow, store)
-            except:
+            except Exception as e:
                 print("%s Make sure you've saved your OAuth credentials as %s" % (
                     GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
                 print(
@@ -123,7 +123,7 @@ class GoogleAPI():
 
         Args:
             query (str): Search for this query
-        
+
         Returns:
             list: containing files matching the search
         """
@@ -188,7 +188,7 @@ class GoogleAPI():
 
     def delete_file(self, id):
         """Delete a UDS file
-        
+
         Attempts to delete a file at a given ID.
 
         Args:
