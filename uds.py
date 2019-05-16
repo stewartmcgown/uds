@@ -6,19 +6,18 @@ import urllib.request
 import mmap
 import io
 import os
-import time
 import argparse
 import json
 import hashlib
 import ntpath
 
+from tqdm import tqdm
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
 from tabulate import tabulate
 
 import Format
 import Encoder
-
 from FileParts import UDSFile, Chunk
 from API import *
 
@@ -50,10 +49,12 @@ class UDS():
         try:
             self.api.delete_file(id)
             if name is not None:
-                print("Deleted {!s}".format(name))  # If Alpha commands are used, this displays the name
+                # If Alpha commands are used, this displays the name
+                print("Deleted {!s}".format(name))
             else:
-                print("Deleted {!s}".format(id))  # If UDS commands are used, this displays the ID
-        except:
+                # If UDS commands are used, this displays the ID
+                print("Deleted {!s}".format(id))
+        except Exception:
             if mode_ != "quiet":
                 print("{!s} File was not a UDS file".format(GoogleAPI.ERROR_OUTPUT))
 
@@ -84,12 +85,22 @@ class UDS():
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
         with open('/'.join([get_downloads_folder(), folder['name']]), "wb") as f:
+            progress_bar_chunks = tqdm(total=len(items),
+                                       unit='chunks',
+                                       dynamic_ncols=True,
+                                       position=0)
+            progress_bar_speed = tqdm(total=len(items)* CHUNK_READ_LENGTH_BYTES,
+                                      unit_scale=1,
+                                      unit='B',
+                                      dynamic_ncols=True,
+                                      position=1)
             for i, item in enumerate(items):
-                progress_bar("Downloading {!s}".format(folder['name']), i, len(items))
                 encoded_part = self.download_part(item['id'])
 
                 # Decode
                 decoded_part = Encoder.decode(encoded_part)
+                progress_bar_chunks.update(1)
+                progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
 
                 # Append decoded part to file
                 f.write(decoded_part)
@@ -97,6 +108,7 @@ class UDS():
             file_hash = self.hash_file(f.name)
 
         original_hash = folder.get("properties").get("sha256")
+
         if original_hash is not None and file_hash != original_hash:
             print("Failed to verify hash")
             print("Downloaded file had hash {!s} compared to original {!s}".format(file_hash[:9], original_hash[:9]))
@@ -162,36 +174,31 @@ class UDS():
         parent = self.api.create_media_folder(media)
 
         # Should be the same
-        no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
-
-
         # Append all chunks to chunk list
-        chunk_list = list()
-        for i in range(no_docs):
-            chunk_list.append(
-                Chunk(path, i, size, media=media, parent=parent['id'])
-            )
-
-        # Begin timing run
-        start_time = time.time()
+        chunk_list = [Chunk(path, i, size, media=media, parent=parent['id']) for i in range(no_docs)]
 
         total = 0
         total_chunks = len(chunk_list)
+        progress_bar_chunks = tqdm(total=total_chunks,
+                                   unit='chunks',
+                                   dynamic_ncols=True,
+                                   position=0)
+        progress_bar_speed = tqdm(total=total_chunks* CHUNK_READ_LENGTH_BYTES,
+                                  unit_scale=1,
+                                  unit='B',
+                                  dynamic_ncols=True,
+                                  position=1)
 
         for chunk in chunk_list:
-            total = total + 1
+            total += 1
             self.upload_chunked_part(chunk)
-            elapsed_time = round(time.time() - start_time, 2)
-            current_speed = round(
-                (total * CHUNK_READ_LENGTH_BYTES) / (elapsed_time * 1024 * 1024), 2)
-            progress_bar("Uploading {!s} at {!s}MB/s".format(media.name, current_speed),
-                         total,
-                         total_chunks)
+            progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
+            progress_bar_chunks.update(1)
 
         # Concurrently execute chunk upload and report back when done.
-        #with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+        # with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
         #    for file in executor.map(ext_upload_chunked_part, chunk_list):
         #        total = total + file
         #        elapsed_time = round(time.time() - start_time, 2)
@@ -200,13 +207,14 @@ class UDS():
         #        progress_bar("Uploading %s at %sMB/s" %
         #                     (media.name, current_speed), total, size)
 
-        finish_time = round(time.time() - start_time, 1)
-
-        progress_bar("Uploaded {!s} in {!s}s".format(media.name, finish_time), 1, 1)
         print("\n")
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
         print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID',]))
+        print("\n")
+        # Print new file output
+        table = [[media.name, media.size, media.encoded_size, parent['id']]]
+        print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID', ]))
 
     def convert_file(self, file_id):
         # Get file metadata
@@ -219,7 +227,7 @@ class UDS():
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while done is False:
-            status, done = downloader.next_chunk()
+            _, done = downloader.next_chunk()
 
         print("Downloaded {!s}".format(metadata['name']))
         do_upload(path, service)
@@ -227,7 +235,8 @@ class UDS():
         # An alternative method would be to use partial download headers
         # and convert and upload the parts individually. Perhaps a
         # future release will implement this.
-    def update(self, mode=0, opts=None):  # Mode sets the mode of updating 0 > Verbose, 1 > Notification, 2 > silent
+    # Mode sets the mode of updating 0 > Verbose, 1 > Notification, 2 > silent
+    def update(self, mode=0, opts=None):
         items = self.api.list_files(opts)
         if not items:
             print('No UDS files found.')
@@ -267,15 +276,12 @@ class UDS():
             print('No UDS files found.')
         else:
             #print('\nUDS Files in Drive:')
-            table = []
-            for item in items:
-                record = [item.name, item.size,
-                          item.encoded_size, item.id_]
-                table.append(record)
-
+            table = [[item.name, item.size, item.encoded_size, item.id_] for item in items]
             print(tabulate(table, headers=['Name', 'Size', 'Encoded', 'ID',]))
 
-    def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
+
+    # Alpha command to erase file via name
+    def erase(self, name, default=1, mode_=None, fallback=None):
         if fallback is not None:
             self.delete_file(fallback, name=name, mode_=mode_)
         else:
@@ -315,10 +321,13 @@ class UDS():
                 id_space.append(item.id_)
         for i in range(check):
             self.grab(fallback=id_space[i], name=name_space[i], default=2)
-        for names in range(len(name_space)):  # Downloads the bulk using data and names
-            self.grab(name_space[names], default=2)  # Update data, not necessary
+        # Downloads the bulk using data and names
+        for names, _ in enumerate(name_space):
+            # Update data, not necessary
+            self.grab(name_space[names], default=2)
 
-    def bunch(self, file_part, path='.'):  # Alpha command to bulk upload files based on file name part
+    # Alpha command to bulk upload files based on file name part
+    def bunch(self, file_part, path='.'):
         files = os.listdir(path)  # Make list of all files in directory
         files_upload = []
         for name in files:  # Cycles through all files
@@ -327,7 +336,7 @@ class UDS():
                     files_upload.append(name)
             elif file_part == "?":
                 files_upload.append(name)
-        for name_data in range(len(files_upload)):  # Upload all files put in list
+        for name_data, _ in enumerate(files_upload):  # Upload all files put in list
             full_path = ''.join([str(path), str(files_upload[name_data])])
             self.do_chunked_upload(full_path)
         print("\n")
@@ -399,7 +408,6 @@ def progress_bar(title, value, endvalue, bar_length=30):
     sys.stdout.write("\r"+title+": [{0}] {1}%            ".format(
         arrow + spaces,
         int(round(percent * 100))))
-    sys.stdout.flush()
 
 
 def write_status(status):
@@ -475,7 +483,7 @@ def main():
                 id = sys.argv[3]
             else:
                 id = sys.argv[2]
-            convert_file(id)
+            uds.convert_file(id)
         else:
             print(options)
     else:
