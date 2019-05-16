@@ -61,9 +61,11 @@ class UDS():
         try:
             self.api.delete_file(id)
             if name is not None:
-                print("Deleted %s" % name)  # If Alpha commands are used, this displays the name
+                # If Alpha commands are used, this displays the name
+                print("Deleted %s" % name)
             else:
-                print("Deleted %s" % id)  # If UDS commands are used, this displays the ID
+                # If UDS commands are used, this displays the ID
+                print("Deleted %s" % id)
         except:
             if mode_ != "quiet":
                 print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
@@ -87,7 +89,7 @@ class UDS():
         if not items:
             print('No parts found.')
             return
-            
+
         # Fix part as int
         for item in items:
             item['properties']['part'] = int(item['properties']['part'])
@@ -114,7 +116,8 @@ class UDS():
 
         original_hash = folder.get("properties").get("sha256")
         if (file_hash != original_hash and original_hash is not None):
-            print("Failed to verify hash\nDownloaded file had hash %s compared to original %s", (file_hash[:9], original_hash[:9]))
+            print("Failed to verify hash\nDownloaded file had hash %s compared to original %s",
+                  (file_hash[:9], original_hash[:9]))
             os.remove(f.name)
 
         progress_bar("Downloaded %s" % folder['name'], 1, 1)
@@ -174,8 +177,6 @@ class UDS():
         no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
-        
-
         # Append all chunks to chunk list
         chunk_list = list()
         for i in range(no_docs):
@@ -216,7 +217,7 @@ class UDS():
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
         print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID',]))
+            'Name', 'Size', 'Encoded', 'ID', ]))
 
     def convert_file(self, file_id):
         # Get file metadata
@@ -237,7 +238,8 @@ class UDS():
         # An alternative method would be to use partial download headers
         # and convert and upload the parts individually. Perhaps a
         # future release will implement this.
-    def update(self, mode=0, opts=None):  # Mode sets the mode of updating 0 > Verbose, 1 > Notification, 2 > silent
+    # Mode sets the mode of updating 0 > Verbose, 1 > Notification, 2 > silent
+    def update(self, mode=0, opts=None):
         items = self.api.list_files(opts)
         if not items:
             print('No UDS files found.')
@@ -256,7 +258,8 @@ class UDS():
                     json.dump(user_data, data4, indent=3)
                 table.append(record)
                 with open("User.txt", 'w') as user:
-                    user.write(tabulate(table, headers=['Name', 'Encoded', 'Size', 'ID']))
+                    user.write(tabulate(table, headers=[
+                               'Name', 'Encoded', 'Size', 'ID']))
             if mode == 0:  # Verbose
                 print(tabulate(table, headers=[
                       'Name', 'Encoded', 'Size', 'ID']))
@@ -289,9 +292,10 @@ class UDS():
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID',]))
+                  'Name', 'Size', 'Encoded', 'ID', ]))
 
-    def erase(self, name, default=1, mode_=None, fallback=None):  # Alpha command to erase file via name
+    # Alpha command to erase file via name
+    def erase(self, name, default=1, mode_=None, fallback=None):
         if fallback is not None:
             self.delete_file(fallback, name=name, mode_=mode_)
         else:
@@ -335,10 +339,13 @@ class UDS():
                 print("", end='')
         for i in range(check):
             self.grab(fallback=id_space[i], name=name_space[i], default=2)
-        for names in range(len(name_space)):  # Downloads the bulk using data and names
-            self.grab(name_space[names], default=2)  # Update data, not necessary
+        # Downloads the bulk using data and names
+        for names in range(len(name_space)):
+            # Update data, not necessary
+            self.grab(name_space[names], default=2)
 
-    def bunch(self, file_part, path='.'):  # Alpha command to bulk upload files based on file name part
+    # Alpha command to bulk upload files based on file name part
+    def bunch(self, file_part, path='.'):
         files = os.listdir(path)  # Make list of all files in directory
         files_upload = []
         for name in files:  # Cycles through all files
@@ -391,7 +398,6 @@ class UDS():
                 sha.update(data)
 
         return sha.hexdigest()
-    
 
     def actions(self, action, args):
         switcher = {
@@ -424,7 +430,7 @@ def progress_bar(title, value, endvalue, bar_length=30):
 
     sys.stdout.write(
         "\r"+title+": [{0}] {1}%            "
-            .format(arrow + spaces, int(round(percent * 100))))
+        .format(arrow + spaces, int(round(percent * 100))))
     sys.stdout.flush()
 
 
