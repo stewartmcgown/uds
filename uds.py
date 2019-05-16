@@ -100,9 +100,9 @@ class UDS():
 
         f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
         progress_bar_chunks = tqdm(total=len(items),
-                            unit='chunks', dynamic_ncols=True,position=0)
-        progress_bar_speed = tqdm(total=len(items)* CHUNK_READ_LENGTH_BYTES,unit_scale=1,
-                            unit='B', dynamic_ncols=True,position=1)   
+                                   unit='chunks', dynamic_ncols=True, position=0)
+        progress_bar_speed = tqdm(total=len(items) * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
+                                  unit='B', dynamic_ncols=True, position=1)
 
         for i, item in enumerate(items):
             encoded_part = self.download_part(item['id'])
@@ -124,8 +124,6 @@ class UDS():
             print("Failed to verify hash\nDownloaded file had hash %s compared to original %s",
                   (file_hash[:9], original_hash[:9]))
             os.remove(f.name)
-
-        progress_bar("Downloaded %s" % folder['name'], 1, 1)
 
     def download_part(self, part_id):
         request = self.api.export_media(part_id)
@@ -192,10 +190,10 @@ class UDS():
         total = 0
         total_chunks = len(chunk_list)
         progress_bar_chunks = tqdm(total=total_chunks,
-                            unit='chunks', dynamic_ncols=True,position=0)
-        progress_bar_speed = tqdm(total=total_chunks* CHUNK_READ_LENGTH_BYTES,unit_scale=1,
-                            unit='B', dynamic_ncols=True,position=1)                    
-        
+                                   unit='chunks', dynamic_ncols=True, position=0)
+        progress_bar_speed = tqdm(total=total_chunks * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
+                                  unit='B', dynamic_ncols=True, position=1)
+
         for chunk in chunk_list:
             total += 1
             self.upload_chunked_part(chunk)
@@ -210,8 +208,6 @@ class UDS():
                     (total) / (elapsed_time * 1024 * 1024), 2)
                 progress_bar("Uploading %s at %sMB/s" %
                              (media.name, current_speed), total, size)"""
-
-        
 
         print("\n")
         # Print new file output
@@ -418,20 +414,6 @@ def get_downloads_folder():
 
 def characters_to_bytes(chars):
     return round((3/4) * chars)
-
-
-def progress_bar(title, value, endvalue, bar_length=30):
-    percent = float(value) / endvalue
-    arrow = '█' * int(round(percent * bar_length))
-    spaces = ' ' * (bar_length - len(arrow))
-
-    if value > endvalue:
-        value = endvalue
-
-    sys.stdout.write(
-        "\r"+title+": [{0}] {1}%            "
-        .format(arrow + spaces, int(round(percent * 100))))
-    sys.stdout.flush()
 
 
 def write_status(status):
