@@ -17,7 +17,7 @@ import json
 import hashlib
 
 import FileParts
-
+import Encoder
 from API import *
 
 DOWNLOADS_FOLDER = "downloads"
