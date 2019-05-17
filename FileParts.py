@@ -27,4 +27,5 @@ class Chunk():
         if range_end > max_size:
             self.range_end = max_size
         else:
-            self.range_end = range_end
+            self.range_end = range_end        
+          
