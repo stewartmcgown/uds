@@ -1,32 +1,32 @@
-def format(bytes, numeric=False):
-    if bytes < 0:
+def format(number_of_bytes, numeric=False):
+    if number_of_bytes < 0:
         raise ValueError("!!! number_of_bytes can't be smaller than 0 !!!")
 
     step = 1024.
 
-    bytes = float(bytes)
+    number_of_bytes = float(number_of_bytes)
     unit = 'bytes'
 
-    if (bytes / step) >= 1:
-        bytes /= step
+    if (number_of_bytes / step) >= 1:
+        number_of_bytes /= step
         unit = 'KB'
 
-    if (bytes / step) >= 1:
-        bytes /= step
+    if (number_of_bytes / step) >= 1:
+        number_of_bytes /= step
         unit = 'MB'
 
-    if (bytes / step) >= 1:
-        bytes /= step
+    if (number_of_bytes / step) >= 1:
+        number_of_bytes /= step
         unit = 'GB'
 
-    if (bytes / step) >= 1:
-        bytes /= step
+    if (number_of_bytes / step) >= 1:
+        number_of_bytes /= step
         unit = 'TB'
 
     precision = 1
-    bytes = round(bytes, precision)
+    number_of_bytes = round(number_of_bytes, precision)
 
     if numeric:
-        return bytes
+        return number_of_bytes
     else:
-        return str(bytes) + ' ' + unit
+        return str(number_of_bytes) + ' ' + unit
