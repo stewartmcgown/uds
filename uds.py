@@ -1,38 +1,38 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import argparse
+import base64
+import concurrent.futures
+import cryptography
+import hashlib
+import io
+from io import StringIO
+import json
+import math
+from mimetypes import MimeTypes
+import mmap
+import ntpath
+import os
+import re
+import shutil
+import sys
+import time
+import urllib.request
+
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseUpload
 from httplib2 import Http
 from oauth2client import file, client, tools
-from mimetypes import MimeTypes
 from tabulate import tabulate
-from io import StringIO
-
-import sys
-import base64
-import math
-import urllib.request
-import ntpath
-import mmap
-import io
-import os
-import time
-import shutil
-import cryptography
-import concurrent.futures
-import Format
-import argparse
-import re
-import json
-import hashlib
 from tqdm import tqdm
 
-import Encoder
-
-from FileParts import UDSFile, Chunk
 from API import *
+import Encoder
+from FileParts import UDSFile, Chunk
+import Format
+
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
