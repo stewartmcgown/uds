@@ -1,16 +1,10 @@
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from googleapiclient.http import MediaIoBaseUpload
-from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 from httplib2 import Http
 from oauth2client import file, client, tools
 from mimetypes import MimeTypes
-from tabulate import tabulate
-from urllib.error import HTTPError
 
 import time
-import io
 
 from FileParts import UDSFile
 
@@ -40,7 +34,7 @@ class GoogleAPI():
                 flow = client.flow_from_clientsecrets(
                     GoogleAPI.CLIENT_SECRET, SCOPES)
                 creds = tools.run_flow(flow, store)
-            except Exception as e:
+            except BaseException:
                 print("%s Make sure you've saved your OAuth credentials as %s" % (
                     GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
                 print(
@@ -54,7 +48,7 @@ class GoogleAPI():
         """Locate the base UDS folder
 
         Returns:
-            file: the file 
+            file: the file
 
         """
         results = self.service.files().list(

@@ -1,15 +1,15 @@
 class UDSFile(object):
-    def __init__(self, name, base64, mime, size, encoded_size,  id=None, parents=['root'], size_numeric=None, shared=False, sha256=''):
+    def __init__(self, name, base64, mime, size, encoded_size,  id=None, parents=None, size_numeric=None, shared=False, sha256=None):
         self.name = name
         self.base64 = base64
         self.mime = mime
         self.size = size
         self.size_numeric = size_numeric
         self.encoded_size = encoded_size
-        self.parents = parents
+        self.parents = parents or ["root"]
         self.id_ = id
         self.shared = shared
-        self.sha256 = sha256
+        self.sha256 = sha256 or ''
 
 
 class Chunk():
@@ -27,4 +27,5 @@ class Chunk():
         if range_end > max_size:
             self.range_end = max_size
         else:
-            self.range_end = range_end
+            self.range_end = range_end        
+          
