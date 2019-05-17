@@ -175,7 +175,7 @@ Successfully Uploaded test.7z.3: [███████████████�
 python uds.py bunch argument[1] argument[2]
 
 argument[1]: name_in_files, or wildcard "?" without quotes
-argument[2]: directory, defualt is current directory of UDS
+argument[2]: directory, default is current directory of UDS
 ```
 
 

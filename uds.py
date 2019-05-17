@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-from mimetypes import MimeTypes
-import sys
-import math
-import urllib.request
-import mmap
-import io
-import os
 import argparse
+import io
 import json
 import hashlib
+import math
+from mimetypes import MimeTypes
+import mmap
 import ntpath
+import os
+import sys
+import urllib.request
 
 from tqdm import tqdm
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
 from tabulate import tabulate
 
-import Format
+from API import *
 import Encoder
 from FileParts import UDSFile, Chunk
-from API import *
+import Format
+
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
@@ -94,7 +95,7 @@ class UDS():
                                       unit='B',
                                       dynamic_ncols=True,
                                       position=1)
-            for i, item in enumerate(items):
+            for _, item in enumerate(items):
                 encoded_part = self.download_part(item['id'])
 
                 # Decode
@@ -114,7 +115,6 @@ class UDS():
             print("Downloaded file had hash {!s} compared to original {!s}".format(file_hash[:9], original_hash[:9]))
             os.remove(f.name)
 
-        progress_bar("Downloaded {!s}".format(folder['name']), 1, 1)
 
     def download_part(self, part_id):
         request = self.api.export_media(part_id)
@@ -191,21 +191,12 @@ class UDS():
                                   dynamic_ncols=True,
                                   position=1)
 
+
         for chunk in chunk_list:
             total += 1
             self.upload_chunked_part(chunk)
             progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
             progress_bar_chunks.update(1)
-
-        # Concurrently execute chunk upload and report back when done.
-        # with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
-        #    for file in executor.map(ext_upload_chunked_part, chunk_list):
-        #        total = total + file
-        #        elapsed_time = round(time.time() - start_time, 2)
-        #        current_speed = round(
-        #            (total) / (elapsed_time * 1024 * 1024), 2)
-        #        progress_bar("Uploading %s at %sMB/s" %
-        #                     (media.name, current_speed), total, size)
 
         print("\n")
         # Print new file output
@@ -395,19 +386,6 @@ def get_downloads_folder():
 
 def characters_to_bytes(chars):
     return round((3/4) * chars)
-
-
-def progress_bar(title, value, endvalue, bar_length=30):
-    percent = float(value) / endvalue
-    arrow = '█' * int(round(percent * bar_length))
-    spaces = ' ' * (bar_length - len(arrow))
-
-    if value > endvalue:
-        value = endvalue
-
-    sys.stdout.write("\r"+title+": [{0}] {1}%            ".format(
-        arrow + spaces,
-        int(round(percent * 100))))
 
 
 def write_status(status):
