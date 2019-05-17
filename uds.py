@@ -16,7 +16,6 @@ import Format
 import json
 import hashlib
 
-import Encoder
 import FileParts
 
 from API import *
