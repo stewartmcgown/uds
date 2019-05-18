@@ -67,10 +67,14 @@ arguments: query
 
 If query starts with re:, we use python's builtin re module to filter the files.
 
+Let us see if any files start with 'Desktop'
 ```
 > python uds.py list "re:^Desktop"
 No UDS files found
+```
 
+Let us see if any files end with '04.iso'
+```
 > python uds.py list "re:.*04.iso"
 Name                      Size   Encoded    ID
 ------------------------  -----  ---------  ---------------------------------  
