@@ -56,7 +56,23 @@ Also supports searching with a query!
 Name                      Size   Encoded    ID
 ------------------------  -----  ---------  ---------------------------------  
 Ubuntu.Desktop.18.10.iso  1.1 GB  1.3 GB    1RzzVfN9goHMTkM1Hf1FUWUVS_2R3GK7D
+
+
+If query starts with re:, we use python's builtin re module to filter the files.
+
+Let us see if any files start with 'Desktop'
+
+> python uds.py list "re:^Desktop"
+No UDS files found
+
+Let us see if any files end with '04.iso'
+
+> python uds.py list "re:.*04.iso"
+Name                      Size   Encoded    ID
+------------------------  -----  ---------  ---------------------------------  
+Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB    1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 ```
+
 
 ```
 [Layout]
@@ -64,24 +80,6 @@ python uds.py list
 
 arguments: query
 ```
-
-If query starts with re:, we use python's builtin re module to filter the files.
-
-Let us see if any files start with 'Desktop'
-```
-> python uds.py list "re:^Desktop"
-No UDS files found
-```
-
-Let us see if any files end with '04.iso'
-```
-> python uds.py list "re:.*04.iso"
-Name                      Size   Encoded    ID
-------------------------  -----  ---------  ---------------------------------  
-Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB    1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
-
-```
-
 
 ### Download
 
