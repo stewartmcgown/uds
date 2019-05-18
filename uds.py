@@ -101,6 +101,8 @@ class UDS():
             # Append decoded part to file
             f.write(decoded_part)
 
+        print(" \r")
+
         file_hash = self.hash_file(f.name)
 
         f.close()
@@ -196,6 +198,7 @@ class UDS():
 
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
+        print(" \r")
         print("\n" + tabulate(table, headers=[
             'Name', 'Size', 'Encoded', 'ID', ]))
 
