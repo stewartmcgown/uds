@@ -123,7 +123,8 @@ class GoogleAPI():
         """
         q = "properties has {key='uds' and value='true'} and trashed=false"
 
-        if (query is not None):
+        #add contains subquery not a regular expression query
+        if (query is not None and not query.startswith("re:")):
             q += " and name contains '%s'" % query
 
         # Call the Drive v3 API
@@ -133,6 +134,18 @@ class GoogleAPI():
             fields="nextPageToken, files(id, name, properties, mimeType)").execute()
 
         items = results.get('files', [])
+
+        # use python's re module to filter files
+        if (query is not None and query.startswith("re:")):
+           import re
+           _re=re.compile(query[3:])
+           _items=[]
+           for item in items:
+               _name=item.get("name")
+               if (_re.match(_name)):
+                  _items.append(item)
+
+           items=_items
 
         files = []
 
