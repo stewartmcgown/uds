@@ -65,6 +65,20 @@ python uds.py list
 arguments: query
 ```
 
+If query starts with re:, we use python's builtin re module to filter the files.
+
+```
+> python uds.py list "re:^Desktop"
+No UDS files found
+
+> python uds.py list "re:.*04.iso"
+Name                      Size   Encoded    ID
+------------------------  -----  ---------  ---------------------------------  
+Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB    1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
+
+```
+
+
 ### Download
 
 ```sh
