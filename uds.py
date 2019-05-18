@@ -1,37 +1,23 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
 from googleapiclient.http import MediaIoBaseUpload
 from googleapiclient.http import MediaIoBaseDownload
-from httplib2 import Http
-from oauth2client import file, client, tools
 from mimetypes import MimeTypes
 from tabulate import tabulate
-from io import StringIO
+from tqdm import tqdm
 
 import sys
-import base64
 import math
 import urllib.request
 import ntpath
 import mmap
 import io
 import os
-import time
-import shutil
-import cryptography
-import concurrent.futures
 import Format
-import argparse
-import re
 import json
 import hashlib
-from tqdm import tqdm
 
+import FileParts
 import Encoder
-
-from FileParts import UDSFile, Chunk
 from API import *
 
 DOWNLOADS_FOLDER = "downloads"
@@ -52,7 +38,7 @@ class UDS():
     def delete_file(self, id, name=None, mode_=None):
         """Deletes a given file
 
-        Use the Google Drive API to delete a file given its ID. 
+        Use the Google Drive API to delete a file given its ID.
 
         Args:
             id (str): ID of the file
@@ -67,7 +53,7 @@ class UDS():
             else:
                 # If UDS commands are used, this displays the ID
                 print("Deleted %s" % id)
-        except:
+        except IOError:
             if mode_ != "quiet":
                 print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
             else:
@@ -104,7 +90,7 @@ class UDS():
         progress_bar_speed = tqdm(total=len(items) * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
                                   unit='B', dynamic_ncols=True, position=1)
 
-        for i, item in enumerate(items):
+        for _, item in enumerate(items):
             encoded_part = self.download_part(item['id'])
 
             # Decode
@@ -114,6 +100,10 @@ class UDS():
 
             # Append decoded part to file
             f.write(decoded_part)
+            
+        print(" \r")
+
+        file_hash = self.hash_file(f.name)
 
         f.close()
         file_hash = self.hash_file(f.name)
@@ -170,20 +160,19 @@ class UDS():
 
         root = self.api.get_base_folder()['id']
 
-        media = UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
+        media = FileParts.UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
                         Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, sha256=file_hash)
 
         parent = self.api.create_media_folder(media)
 
         # Should be the same
-        no_chunks = math.ceil(size / CHUNK_READ_LENGTH_BYTES)
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
         # Append all chunks to chunk list
         chunk_list = list()
         for i in range(no_docs):
             chunk_list.append(
-                Chunk(path, i, size, media=media, parent=parent['id'])
+                FileParts.Chunk(path, i, size, media=media, parent=parent['id'])
             )
 
         total = 0
@@ -208,10 +197,10 @@ class UDS():
                 progress_bar("Uploading %s at %sMB/s" %
                              (media.name, current_speed), total, size)"""
 
-        print("\n")
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
-        print(tabulate(table, headers=[
+        print(" \r")
+        print("\n" + tabulate(table, headers=[
             'Name', 'Size', 'Encoded', 'ID', ]))
 
     def convert_file(self, file_id):
@@ -225,7 +214,7 @@ class UDS():
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while done is False:
-            status, done = downloader.next_chunk()
+            _, done = downloader.next_chunk() 
 
         print("Downloaded %s" % metadata['name'])
         do_upload(path, service)

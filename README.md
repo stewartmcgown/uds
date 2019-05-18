@@ -4,12 +4,12 @@ Store files in Google Docs without counting against your quota.
 
 sorry @ the guys from google internal forums who are looking at this
 
-### Features
+## Features
 
 - Upload files to Google Drive without using storage space
 - Download any stored files to your computer
 
-### Logic
+## Logic
 
 - Google Docs take up 0 bytes of quota in your Google Drive
 - Split up binary files into Google Docs, with base64 encoded text
@@ -17,7 +17,7 @@ sorry @ the guys from google internal forums who are looking at this
 - A single google doc can store about a million characters. This is around 710KB of base64 encoded data.
 - Some experiments with multithreading the uploads, but there was no significant performance increase.
 
-### Authentication
+## Authentication
 
 1. Head to [Google's API page](https://developers.google.com/drive/api/v3/quickstart/python) and enable the Drive API
 2. Download the configuration file as 'client_secret.json' to the UDS directory
@@ -175,7 +175,7 @@ Successfully Uploaded test.7z.3: [███████████████�
 python uds.py bunch argument[1] argument[2]
 
 argument[1]: name_in_files, or wildcard "?" without quotes
-argument[2]: directory, defualt is current directory of UDS
+argument[2]: directory, default is current directory of UDS
 ```
 
 
@@ -212,6 +212,5 @@ python uds.py wipe argument
 
 arguments: name_in_files, or wildcard "?" without quotes
 ```
-
 
 **Compatible with Python 3.**
