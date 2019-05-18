@@ -115,9 +115,8 @@ class UDS():
             # Append decoded part to file
             f.write(decoded_part)
 
-        file_hash = self.hash_file(f.name)
-
         f.close()
+        file_hash = self.hash_file(f.name)
 
         original_hash = folder.get("properties").get("sha256")
         if (file_hash != original_hash and original_hash is not None):
