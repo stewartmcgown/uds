@@ -147,7 +147,7 @@ class GoogleAPI():
                 encoded_size=props.get("encoded_size"),
                 id=f.get("id"),
                 shared=props.get("shared"),
-                md5=f.get("md5C")
+                md5=f.get("md5Checksum")
             ))
 
         return files
