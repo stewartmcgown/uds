@@ -99,7 +99,7 @@ class GoogleAPI():
                 'size': media.size,
                 'size_numeric': media.size_numeric,
                 'encoded_size': media.encoded_size,
-                'sha256': media.sha256
+                'md5': media.md5
             },
             'parents': media.parents
         }
@@ -147,7 +147,7 @@ class GoogleAPI():
                 encoded_size=props.get("encoded_size"),
                 id=f.get("id"),
                 shared=props.get("shared"),
-                sha256=props.get("sha256")
+                md5=props.get("md5")
             ))
 
         return files

@@ -2,7 +2,7 @@ import base64
 
 
 def encode(chunk):
-    enc = base64.b64encode(chunk).decode()
+    enc = str(base64.encodestring(chunk), 'utf-8')
     return enc
 
 
