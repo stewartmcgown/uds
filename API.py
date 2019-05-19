@@ -99,7 +99,7 @@ class GoogleAPI():
                 'size': media.size,
                 'size_numeric': media.size_numeric,
                 'encoded_size': media.encoded_size,
-                'sha256': media.sha256
+                'md5': media.md5,
             },
             'parents': media.parents
         }
@@ -130,7 +130,7 @@ class GoogleAPI():
         results = self.service.files().list(
             q=q,
             pageSize=1000,
-            fields="nextPageToken, files(id, name, properties, mimeType)").execute()
+            fields="nextPageToken, files(id, name, properties, mimeType)".execute())
 
         items = results.get('files', [])
 
@@ -147,7 +147,7 @@ class GoogleAPI():
                 encoded_size=props.get("encoded_size"),
                 id=f.get("id"),
                 shared=props.get("shared"),
-                sha256=props.get("sha256")
+                md5=f.get("md5C")
             ))
 
         return files

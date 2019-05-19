@@ -81,18 +81,16 @@ class UDS():
         for item in items:
             item['properties']['part'] = int(item['properties']['part'])
 
-        #print('Parts of %s:' % folder['name'])
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
 
-        f = open("%s/%s" % (get_downloads_folder(), folder['name']), "wb")
+        f = open("%s/%s" % (get_downloads_folder(), folder['name']), "a+b")
         progress_bar_chunks = tqdm(total=len(items),
                                    unit='chunks', dynamic_ncols=True, position=0)
         progress_bar_speed = tqdm(total=len(items) * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
                                   unit='B', dynamic_ncols=True, position=1)
 
-        for _, item in enumerate(items):
+        for item in items:
             encoded_part = self.download_part(item['id'])
-
             # Decode
             decoded_part = Encoder.decode(encoded_part)
             progress_bar_chunks.update(1)
@@ -107,10 +105,10 @@ class UDS():
 
         f.close()
 
-        original_hash = folder.get("properties").get("sha256")
+        original_hash = folder.get("md5Checksum")
         if (file_hash != original_hash and original_hash is not None):
-            print("Failed to verify hash\nDownloaded file had hash %s compared to original %s",
-                  (file_hash[:9], original_hash[:9]))
+            print("Failed to verify hash\nDownloaded file had hash {} compared to original {}".format(
+                  file_hash, original_hash))
             os.remove(f.name)
 
     def download_part(self, part_id):
@@ -126,7 +124,6 @@ class UDS():
     def upload_chunked_part(self, chunk, api=None):
         if not api:
             api = self.api
-        #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
         with open(chunk.path, "r") as fd:
             mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
@@ -160,7 +157,7 @@ class UDS():
         root = self.api.get_base_folder()['id']
 
         media = FileParts.UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, sha256=file_hash)
+                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, md5=file_hash)
 
         parent = self.api.create_media_folder(media)
 
@@ -371,7 +368,7 @@ class UDS():
             self.erase(fallback=id_space[i], name=name_space[i], default=2)
 
     def hash_file(self, path):
-        sha = hashlib.sha256()
+        sha = hashlib.md5()
 
         with open(path, 'rb') as f:
             while True:
