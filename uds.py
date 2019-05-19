@@ -15,6 +15,7 @@ import os
 import Format
 import json
 import hashlib
+import base64
 
 import FileParts
 import Encoder
@@ -93,6 +94,7 @@ class UDS():
             encoded_part = self.download_part(item['id'])
             # Decode
             decoded_part = Encoder.decode(encoded_part)
+            print(decoded_part)
             progress_bar_chunks.update(1)
             progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
 
