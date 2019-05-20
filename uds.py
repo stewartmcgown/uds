@@ -19,6 +19,7 @@ from tqdm import tqdm
 import encoder
 import file_parts
 from api import *
+from api import GoogleAPI
 from custom_exceptions import PythonVersionError, NoClientSecretError
 from size_formatting import formatter
 
@@ -499,7 +500,7 @@ def main():
 
 
 def ext_upload_chunked_part(chunk):
-    api = GoogleAPI()
+    _api = GoogleAPI()
     # print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
     with open(chunk.path, "r") as fd:
@@ -520,7 +521,7 @@ def ext_upload_chunked_part(chunk):
     mediaio_file = MediaIoBaseUpload(io.StringIO(encoded_chunk),
                                      mimetype='text/plain')
 
-    api.upload_single_file(mediaio_file, file_metadata)
+    _api.upload_single_file(mediaio_file, file_metadata)
 
     return len(chunk_bytes)
 
