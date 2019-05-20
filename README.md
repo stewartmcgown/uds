@@ -4,6 +4,8 @@ Store files in Google Docs without counting against your quota.
 
 sorry @ the guys from google internal forums who are looking at this
 
+Develoment on a web-based JS version has started [here](https://github.com/stewartmcgown/uds-web).
+
 ## Features
 
 - Upload files to Google Drive without using storage space
