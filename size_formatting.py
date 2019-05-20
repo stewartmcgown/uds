@@ -1,4 +1,4 @@
-def format(number_of_bytes, numeric=False):
+def formatter(number_of_bytes, numeric=False):
     if number_of_bytes < 0:
         raise ValueError("!!! number_of_bytes can't be smaller than 0 !!!")
 
