@@ -1,21 +1,11 @@
+import time
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from httplib2 import Http
 from oauth2client import file, client, tools
-from mimetypes import MimeTypes
-
-import time
-
-from FileParts import UDSFile
-
-
-class FileNotFoundException(Exception):
-    pass
-
-
-class FileNotUDSException(Exception):
-    pass
-
+from file_parts import UDSFile
+from custom_exceptions import FileNotUDSError
 
 class GoogleAPI():
     ERROR_OUTPUT = "[ERROR]"
@@ -28,20 +18,19 @@ class GoogleAPI():
         # Set up the Drive v3 API
         SCOPES = ['https://www.googleapis.com/auth/drive']
         store = file.Storage('credentials.json')
-        creds = store.get()
-        if not creds or creds.invalid:
+        credentials = store.get()
+        if not credentials or credentials.invalid:
             try:
-                flow = client.flow_from_clientsecrets(
-                    GoogleAPI.CLIENT_SECRET, SCOPES)
-                creds = tools.run_flow(flow, store)
-            except BaseException:
+                flow = client.flow_from_clientsecrets(GoogleAPI.CLIENT_SECRET, SCOPES)
+                credentials = tools.run_flow(flow, store)
+            except ConnectionRefusedError:
                 print("%s Make sure you've saved your OAuth credentials as %s" % (
                     GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
                 print(
                     "If you've already done that, then run uds.py without any arguments first.")
                 exit()
 
-        self.service = build('drive', 'v3', http=creds.authorize(Http()))
+        self.service = build('drive', 'v3', http=credentials.authorize(Http()))
         return self.service
 
     def get_base_folder(self):
@@ -91,6 +80,7 @@ class GoogleAPI():
         Args:
             media (UDSFile): the file to create for
         """
+
         file_metadata = {
             'name': media.name,
             'mimeType': 'application/vnd.google-apps.folder',
@@ -123,7 +113,7 @@ class GoogleAPI():
         """
         q = "properties has {key='uds' and value='true'} and trashed=false"
 
-        if (query is not None):
+        if query is not None:
             q += " and name contains '%s'" % query
 
         # Call the Drive v3 API
@@ -175,7 +165,7 @@ class GoogleAPI():
 
             token = page_of_files.get("nextPageToken")
 
-            if token == None:
+            if token is None:
                 break
 
         return all_parts
@@ -189,8 +179,7 @@ class GoogleAPI():
             id (str): ID of the file
 
         Raises:
-            FileNotUDSException: If the file is found, but is not of type UDS
-            FileNotFoundException: If the ID does not exist.
+            FileNotUDSError: If the file is found, but is not of type UDS
 
         """
         # Ensure the file is a UDS one
@@ -200,15 +189,15 @@ class GoogleAPI():
             if info.get("properties").get("uds"):
                 return self.service.files().delete(fileId=id).execute()
             else:
-                raise FileNotUDSException()
-        except:
-            raise FileNotFoundException()
+                raise(FileNotUDSError())
+        except Exception:
+            raise(FileNotFoundError())
 
     def get_file(self, id):
         return self.service.files().get(fileId=id, fields="*").execute()
 
-    def export_media(self, id):
-        return self.service.files().export_media(fileId=id, mimeType='text/plain')
+    def export_media(self, _id):
+        return self.service.files().export_media(fileId=_id, mimeType='text/plain')
 
     def upload_single_file(self, media_file, file_metadata):
         """Uploads a single file to the Drive
@@ -219,18 +208,17 @@ class GoogleAPI():
         """
         while True:
             try:
-                file = self.service.files().create(body=file_metadata,
-                                                   media_body=media_file,
-                                                   fields='id').execute()
+                _file = self.service.files().create(body=file_metadata,
+                                                    media_body=media_file,
+                                                    fields='id').execute()
                 break
             except HttpError as e:
-                print(e._get_reason())
-                print("Failed to upload chunk %s. Retrying... " %
-                      file_metadata.get("properties").get("part"))
+                print('Failed to upload chunk {}. Retrying... '
+                      .format(file_metadata.get("properties").get("part")))
                 time.sleep(1)
                 continue
 
-        return file, file_metadata
+        return _file, file_metadata
 
     def hide_file(self, id):
         """Hide a given file

@@ -17,9 +17,9 @@ class Error(Exception):
             print("\nFailed with: {}\n".format(type(err).__name__))
             print(err)
         finally:
+            print("")
             sys.exit()
-            print(" ")
-    
+
 
 class FileNotUDSError(Error):
     """Raises when file is found, but it is not of type uds
@@ -36,8 +36,8 @@ class FileNotUDSError(Error):
 
         return "{}".format(self.message)
 
-class PythonVersionError(Error):
 
+class PythonVersionError(Error):
 
     """Raised when this a script is run with an unsupported Python version (<=3.0.0).
     
@@ -49,7 +49,10 @@ class PythonVersionError(Error):
     """
     def __init__(self, version_used):
         self.version_used = version_used
-        self.message = "Attempted to run the module with Python version of {}, which is not supported by this module\nPlease use Python 3 (or higher) instead.".format(self.version_used)
+        self.message = 'Attempted to run the module with Python version of {}, ' \
+                       'which is not supported by this module\n' \
+                       'Please use Python 3 (or higher) instead.'.format(
+                        self.version_used)
 
     def formatter(self):
         super(PythonVersionError, self).formatter(self.get_instance(), self.version_used)
@@ -60,17 +63,20 @@ class PythonVersionError(Error):
     def __str__(self):
         return "{}".format(self.message)
 
+
 class NoClientSecretError(Error):
+
     """Raised when the current working directory has no file name 'client_secret.json'
 
     If this error is raised, be sure you renamed 'credentials.json' to 'client_secret.json'
 
     Attributes:
-        message  -- explanation why exception was reaised.
+        message  -- explanation why exception was raised.
 
     """
     def __init__(self):
-        self.message = "No file named 'client_secret.json' in current working directory. Ensure you've followed the installation instructions on GitHub."
+        self.message = "No file named 'client_secret.json' in current working directory." \
+                       "Ensure you've followed the installation instructions on GitHub."
 
     def formatter(self):
         super().formatter(self.get_instance())
