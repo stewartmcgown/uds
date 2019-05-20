@@ -1,24 +1,35 @@
 # -*- coding: utf-8 -*-
-from googleapiclient.http import MediaIoBaseUpload
-from googleapiclient.http import MediaIoBaseDownload
+from __future__ import print_function
+
+import hashlib
+import io
+import json
+import math
+import mmap
+import ntpath
+import os
+import sys
 from mimetypes import MimeTypes
+
+from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseUpload
 from tabulate import tabulate
 from tqdm import tqdm
 
-import sys
-import math
-import urllib.request
-import ntpath
-import mmap
-import io
-import os
-import Format
-import json
-import hashlib
+import encoder
+import file_parts
+from api import *
+from api import GoogleAPI
+from custom_exceptions import PythonVersionError, NoClientSecretError
+from size_formatting import formatter
 
-import FileParts
-import Encoder
-from API import *
+if sys.version_info.major < 3:
+    PythonVersionError(".".join(str(v) for v in sys.version_info[:2])).formatter()
+
+if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
+    NoClientSecretError().formatter()
+
+import urllib.request
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
@@ -92,8 +103,8 @@ class UDS():
         for item in items:
             encoded_part = self.download_part(item['id'])
             # Decode
-            decoded_part = Encoder.decode(encoded_part)
-            
+            decoded_part = encoder.decode(encoded_part)
+
             progress_bar_chunks.update(1)
             progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
 
@@ -109,7 +120,7 @@ class UDS():
         original_hash = folder.get("md5Checksum")
         if (file_hash != original_hash and original_hash is not None):
             print("Failed to verify hash\nDownloaded file had hash {} compared to original {}".format(
-                  file_hash, original_hash))
+                file_hash, original_hash))
             os.remove(f.name)
 
     def download_part(self, part_id):
@@ -121,8 +132,8 @@ class UDS():
             status, done = downloader.next_chunk()
         return fh.getvalue()
 
-    # Upload a chunked part to drive and return the size of the chunk
     def upload_chunked_part(self, chunk, api=None):
+        """Upload a chunked part to drive and return the size of the chunk"""
         if not api:
             api = self.api
 
@@ -130,7 +141,7 @@ class UDS():
             mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
             chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
-        encoded_chunk = Encoder.encode(chunk_bytes)
+        encoded_chunk = encoder.encode(chunk_bytes)
 
         file_metadata = {
             'name': chunk.media.name + str(chunk.part),
@@ -153,12 +164,14 @@ class UDS():
         size = os.stat(path).st_size
         file_hash = self.hash_file(path)
 
-        encoded_size = size * (4/3)
+        encoded_size = size * (4 / 3)
 
         root = self.api.get_base_folder()['id']
 
-        media = FileParts.UDSFile(ntpath.basename(path), None, MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
-                        Format.format(size), Format.format(encoded_size), parents=[root], size_numeric=size, md5=file_hash)
+        media = file_parts.UDSFile(ntpath.basename(path), None,
+                                   MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
+                                   formatter(size), formatter(encoded_size), parents=[root], size_numeric=size,
+                                   md5=file_hash)
 
         parent = self.api.create_media_folder(media)
 
@@ -169,7 +182,7 @@ class UDS():
         chunk_list = list()
         for i in range(no_docs):
             chunk_list.append(
-                FileParts.Chunk(path, i, size, media=media, parent=parent['id'])
+                file_parts.Chunk(path, i, size, media=media, parent=parent['id'])
             )
 
         total = 0
@@ -184,16 +197,17 @@ class UDS():
             self.upload_chunked_part(chunk)
             progress_bar_speed.update(CHUNK_READ_LENGTH_BYTES)
             progress_bar_chunks.update(1)
-        """# Concurrently execute chunk upload and report back when done.
-        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
-            for file in executor.map(ext_upload_chunked_part, chunk_list):
-                total = total + file
-                elapsed_time = round(time.time() - start_time, 2)
-                current_speed = round(
-                    (total) / (elapsed_time * 1024 * 1024), 2)
-                progress_bar("Uploading %s at %sMB/s" %
-                             (media.name, current_speed), total, size)"""
-
+        # 
+        # Concurrently execute chunk upload and report back when done.
+        # with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS_ALLOWED) as executor:
+        #     for file in executor.map(ext_upload_chunked_part, chunk_list):
+        #         total = total + file
+        #         elapsed_time = round(time.time() - start_time, 2)
+        #         current_speed = round(
+        #             (total) / (elapsed_time * 1024 * 1024), 2)
+        #         progress_bar("Uploading %s at %sMB/s" %
+        #                   (media.name, current_speed), total, size)
+        # ""
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
         print(" \r")
@@ -211,7 +225,7 @@ class UDS():
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while done is False:
-            _, done = downloader.next_chunk() 
+            _, done = downloader.next_chunk()
 
         print("Downloaded %s" % metadata['name'])
         do_upload(path, service)
@@ -219,6 +233,7 @@ class UDS():
         # An alternative method would be to use partial download headers
         # and convert and upload the parts individually. Perhaps a
         # future release will implement this.
+
     # Mode sets the mode of updating 0 > Verbose, 1 > Notification, 2 > silent
     def update(self, mode=0, opts=None):
         items = self.api.list_files(opts)
@@ -240,10 +255,10 @@ class UDS():
                 table.append(record)
                 with open("User.txt", 'w') as user:
                     user.write(tabulate(table, headers=[
-                               'Name', 'Encoded', 'Size', 'ID']))
+                        'Name', 'Encoded', 'Size', 'ID']))
             if mode == 0:  # Verbose
                 print(tabulate(table, headers=[
-                      'Name', 'Encoded', 'Size', 'ID']))
+                    'Name', 'Encoded', 'Size', 'ID']))
             elif mode == 1:  # Notify
                 print("Data Updated!\n")
             else:  # Silent Catch
@@ -265,7 +280,7 @@ class UDS():
         if not items:
             print('No UDS files found.')
         else:
-            #print('\nUDS Files in Drive:')
+            # print('\nUDS Files in Drive:')
             table = []
             for item in items:
                 record = [item.name, item.size,
@@ -273,7 +288,7 @@ class UDS():
                 table.append(record)
 
             print(tabulate(table, headers=[
-                  'Name', 'Size', 'Encoded', 'ID', ]))
+                'Name', 'Size', 'Encoded', 'ID', ]))
 
     # Alpha command to erase file via name
     def erase(self, name, default=1, mode_=None, fallback=None):
@@ -398,7 +413,7 @@ def get_downloads_folder():
 
 
 def characters_to_bytes(chars):
-    return round((3/4) * chars)
+    return round((3 / 4) * chars)
 
 
 def write_status(status):
@@ -485,14 +500,14 @@ def main():
 
 
 def ext_upload_chunked_part(chunk):
-    api = GoogleAPI()
-    #print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
+    _api = GoogleAPI()
+    # print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
     with open(chunk.path, "r") as fd:
         mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
         chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
-    encoded_chunk = Encoder.encode(chunk_bytes)
+    encoded_chunk = encoder.encode(chunk_bytes)
 
     file_metadata = {
         'name': chunk.media.name + str(chunk.part),
@@ -506,13 +521,10 @@ def ext_upload_chunked_part(chunk):
     mediaio_file = MediaIoBaseUpload(io.StringIO(encoded_chunk),
                                      mimetype='text/plain')
 
-    api.upload_single_file(mediaio_file, file_metadata)
+    _api.upload_single_file(mediaio_file, file_metadata)
 
     return len(chunk_bytes)
 
 
 if __name__ == '__main__':
-    if (sys.version_info[0] < 3):
-        print("%s You must use Python 3+" % GoogleAPI.ERROR_OUTPUT)
-    else:
-        main()
+    main()
