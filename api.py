@@ -7,7 +7,9 @@ from oauth2client import file, client, tools
 from file_parts import UDSFile
 from custom_exceptions import FileNotUDSError
 
-class GoogleAPI():
+
+class GoogleAPI:
+
     ERROR_OUTPUT = "[ERROR]"
     CLIENT_SECRET = 'client_secret.json'
 
