@@ -16,7 +16,7 @@ from googleapiclient.http import MediaIoBaseUpload
 from tabulate import tabulate
 from tqdm import tqdm
 
-import encoder
+import Encoder as encoder
 import file_parts
 from api import *
 from api import GoogleAPI
