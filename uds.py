@@ -11,17 +11,17 @@ import os
 import sys
 from mimetypes import MimeTypes
 
-from googleapiclient.http import MediaIoBaseDownload
-from googleapiclient.http import MediaIoBaseUpload
-from tabulate import tabulate
-from tqdm import tqdm
-
-import Encoder as encoder
+import encoder
 import file_parts
 from api import *
 from api import GoogleAPI
 from custom_exceptions import PythonVersionError, NoClientSecretError
+from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseUpload
 from size_formatting import formatter
+from tabulate import tabulate
+from tqdm import tqdm
+import urllib
 
 if sys.version_info.major < 3:
     PythonVersionError(".".join(str(v) for v in sys.version_info[:2])).formatter()
@@ -29,7 +29,6 @@ if sys.version_info.major < 3:
 if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
     NoClientSecretError().formatter()
 
-import urllib.request
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
@@ -42,18 +41,20 @@ MAX_WORKERS_ALLOWED = 10
 CHUNK_READ_LENGTH_BYTES = 750000
 
 
-class UDS():
+class UDS:
     def __init__(self):
         self.api = GoogleAPI()
 
     def delete_file(self, id, name=None, mode_=None):
         """Deletes a given file
-
         Use the Google Drive API to delete a file given its ID.
 
         Args:
             id (str): ID of the file
             name (str): Name of the file
+            :param id: 
+            :param name: 
+            :param mode_: 
 
         """
         try:
@@ -79,6 +80,8 @@ class UDS():
 
         Args:
             parent_id (str): The ID of the containing folder
+            :param parent_id: 
+            :return: 
         """
         items = self.api.recursive_list_folder(parent_id)
 
@@ -124,6 +127,11 @@ class UDS():
             os.remove(f.name)
 
     def download_part(self, part_id):
+        """
+
+        :param part_id: 
+        :return: 
+        """
         request = self.api.export_media(part_id)
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
@@ -133,7 +141,11 @@ class UDS():
         return fh.getvalue()
 
     def upload_chunked_part(self, chunk, api=None):
-        """Upload a chunked part to drive and return the size of the chunk"""
+        """Upload a chunked part to drive and return the size of the chunk
+        :param chunk: 
+        :param api: 
+        :return: 
+        """
         if not api:
             api = self.api
 
@@ -160,6 +172,10 @@ class UDS():
         return len(chunk_bytes)
 
     def do_chunked_upload(self, path):
+        """
+        :rtype: object
+        :param path: 
+        """
         # Prepare media file
         size = os.stat(path).st_size
         file_hash = self.hash_file(path)
