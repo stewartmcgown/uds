@@ -59,7 +59,7 @@ class PythonVersionError(Error):
                        'Please use Python 3 (or higher) instead.'.format(self.version_used)
 
     def formatter(self, **kwargs):
-        super(PythonVersionError, self).formatter(PythonVersionError, self.version_used)
+        Error.formatter(PythonVersionError, self.version_used)
 
     def __str__(self):
         return "{}".format(self.message)
