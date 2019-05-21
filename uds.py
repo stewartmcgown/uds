@@ -21,14 +21,13 @@ from googleapiclient.http import MediaIoBaseUpload
 from size_formatting import formatter
 from tabulate import tabulate
 from tqdm import tqdm
-import urllib
-
-if sys.version_info.major < 3:
+try:
+    from urllib.request import pathname2url
+except ImportError:
     PythonVersionError(".".join(str(v) for v in sys.version_info[:2])).formatter()
 
 if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
     NoClientSecretError().formatter()
-
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"
@@ -74,15 +73,15 @@ class UDS:
     def build_file(self, parent_id):
         """Download a uds file
 
-        This will fetch the Docs one by one, concatting them
+        This will fetch the Docs one by one, concatenating them
         to a local base64 file. The file will then be converted
-        from base64 to the appropriate mimetype.
+        from base64 to the appropriate mime-type.
 
         Args:
             parent_id (str): The ID of the containing folder
-            :param parent_id: 
-            :return: 
-        """
+            :return:
+            :param parent_id:
+         """
         items = self.api.recursive_list_folder(parent_id)
 
         folder = self.api.get_file(parent_id)
@@ -121,7 +120,7 @@ class UDS:
         f.close()
 
         original_hash = folder.get("md5Checksum")
-        if (file_hash != original_hash and original_hash is not None):
+        if file_hash != original_hash and original_hash is not None:
             print("Failed to verify hash\nDownloaded file had hash {} compared to original {}".format(
                 file_hash, original_hash))
             os.remove(f.name)
@@ -185,7 +184,7 @@ class UDS:
         root = self.api.get_base_folder()['id']
 
         media = file_parts.UDSFile(ntpath.basename(path), None,
-                                   MimeTypes().guess_type(urllib.request.pathname2url(path))[0],
+                                   MimeTypes().guess_type(pathname2url(path))[0],
                                    formatter(size), formatter(encoded_size), parents=[root], size_numeric=size,
                                    md5=file_hash)
 

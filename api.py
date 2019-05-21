@@ -1,15 +1,14 @@
 import time
 
+from custom_exceptions import FileNotUDSError
+from file_parts import UDSFile
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from httplib2 import Http
 from oauth2client import file, client, tools
-from file_parts import UDSFile
-from custom_exceptions import FileNotUDSError
 
 
 class GoogleAPI:
-
     ERROR_OUTPUT = "[ERROR]"
     CLIENT_SECRET = 'client_secret.json'
 
@@ -18,7 +17,7 @@ class GoogleAPI:
 
     def reauth(self):
         # Set up the Drive v3 API
-        SCOPES = ['https://www.googleapis.com/auth/drive']
+        SCOPES = ["https://www.googleapis.com/auth/drive"]
         store = file.Storage('credentials.json')
         credentials = store.get()
         if not credentials or credentials.invalid:
@@ -40,6 +39,7 @@ class GoogleAPI:
 
         Returns:
             file: the file
+            :return:
 
         """
         results = self.service.files().list(
@@ -147,7 +147,7 @@ class GoogleAPI:
     def recursive_list_folder(self, parent_id, token=None):
         """Recursively list a folder
 
-        Creates a flat array of a folders contents, with all children being present on the 
+        Creates a flat array of a folders contents, with all children being present on the
         top level.
 
         Args:
@@ -191,9 +191,9 @@ class GoogleAPI:
             if info.get("properties").get("uds"):
                 return self.service.files().delete(fileId=id).execute()
             else:
-                raise(FileNotUDSError())
+                raise (FileNotUDSError())
         except Exception:
-            raise(FileNotFoundError())
+            raise (FileNotFoundError())
 
     def get_file(self, id):
         return self.service.files().get(fileId=id, fields="*").execute()

@@ -1,5 +1,6 @@
 class UDSFile(object):
-    def __init__(self, name, base64, mime, size, encoded_size,  id=None, parents=None, size_numeric=None, shared=False, md5=None):
+    def __init__(self, name, base64, mime, size, encoded_size, id=None, parents=None, size_numeric=None, shared=False,
+                 md5=None):
         self.name = name
         self.base64 = base64
         self.mime = mime
@@ -12,7 +13,7 @@ class UDSFile(object):
         self.md5 = md5 or ''
 
 
-class Chunk():
+class Chunk:
     CHUNK_READ_LENGTH_BYTES = 750000
 
     def __init__(self, path, part, max_size, media, parent):
@@ -23,9 +24,8 @@ class Chunk():
         self.parent = parent
 
         range_end = ((part + 1) * Chunk.CHUNK_READ_LENGTH_BYTES)
-    
+
         if range_end > max_size:
             self.range_end = max_size
         else:
-            self.range_end = range_end        
-          
+            self.range_end = range_end
