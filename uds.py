@@ -15,7 +15,7 @@ import encoder
 import file_parts
 from api import *
 from api import GoogleAPI
-from custom_exceptions import PythonVersionError, NoClientSecretError
+from custom_exceptions import PythonVersionError, NoClientSecretError, Error
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaIoBaseUpload
 from size_formatting import formatter
@@ -24,10 +24,10 @@ from tqdm import tqdm
 try:
     from urllib.request import pathname2url
 except ImportError:
-    PythonVersionError(".".join(str(v) for v in sys.version_info[:2])).formatter()
+    Error.formatter(PythonVersionError, ".".join(str(v) for v in sys.version_info[:2]))
 
 if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
-    NoClientSecretError().formatter()
+    Error.formatter(NoClientSecretError)
 
 DOWNLOADS_FOLDER = "downloads"
 TEMP_FOLDER = "tmp"

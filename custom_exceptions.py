@@ -57,10 +57,6 @@ class PythonVersionError(Error):
         self.message = 'Attempted to run the module with Python version of {}, ' \
                        'which is not supported by this module\n' \
                        'Please use Python 3 (or higher) instead.'.format(self.version_used)
-
-    def formatter(self, **kwargs):
-        Error.formatter(PythonVersionError, self.version_used)
-
     def __str__(self):
         return "{}".format(self.message)
 
@@ -78,9 +74,6 @@ class NoClientSecretError(Error):
     def __init__(self):
         self.message = "No file named 'client_secret.json' in current working directory." \
                        "Ensure you've followed the installation instructions on GitHub."
-
-    def formatter(self, **kwargs):
-        Error.formatter(NoClientSecretError)
 
     def __str__(self):
         return "{}".format(self.message)
