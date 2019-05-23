@@ -336,14 +336,14 @@ class UDS:
         id_space = []
         check = 0
         for item in items:  # Checks if part is in the name of any UDS file and adds them to queue
-            if str(part) is not "?":
+            if str(part) != "?":
                 if str(part) in str(item.name):  # The name check
                     name_space.append(item.name)
                     id_space.append(item.id_)
                     check += 1
                 else:
                     print("", end='')
-            elif str(part) is "?":
+            elif str(part) == "?":
                 name_space.append(item.name)
                 id_space.append(item.id_)
             else:  # Fallback for doing nothing, not necessary, just habit
@@ -360,12 +360,12 @@ class UDS:
         files = os.listdir(path)  # Make list of all files in directory
         files_upload = []
         for name in files:  # Cycles through all files
-            if file_part is not "?":
+            if file_part != "?":
                 if file_part in name:  # Checks if part is in any files and adds to list
                     files_upload.append(name)
                 else:
                     print("", end='')
-            elif file_part is "?":
+            elif file_part == "?":
                 files_upload.append(name)
             else:  # Fallback
                 print("", end='')
@@ -382,14 +382,14 @@ class UDS:
         id_space = []
         check = 0
         for item in items:  # Add names to list
-            if str(part) is not "?":
+            if str(part) != "?":
                 if str(part) in str(item.name):  # add names if they have part in them
                     name_space.append(item.name)
                     check += 1
                     id_space.append(item.id_)
                 else:
                     print("", end='')
-            elif str(part) is "?":
+            elif str(part) == "?":
                 name_space.append(item.name)
                 check += 1
                 id_space.append(item.id_)
