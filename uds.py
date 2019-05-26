@@ -422,7 +422,7 @@ def write_status(status):
 
 def _parse_args():
     """Parse command line arguments"""
-    formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=52))
+    formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=52)
     parser = argparse.ArgumentParser(formatter_class=formatter)
     parser.add_argument("--push", metavar='path_to_file', nargs=1,
                         help="Uploads a file from this computer")
