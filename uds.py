@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-
 import argparse
 import hashlib
 import io
@@ -12,16 +10,17 @@ import os
 import sys
 from mimetypes import MimeTypes
 
-import encoder
-import file_parts
-from api import *
-from api import GoogleAPI
-from custom_exceptions import PythonVersionError, NoClientSecretError, Error
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.http import MediaIoBaseUpload
 from size_formatting import formatter
 from tabulate import tabulate
 from tqdm import tqdm
+
+import encoder
+import file_parts
+from api import *
+from api import GoogleAPI
+from custom_exceptions import PythonVersionError, NoClientSecretError, Error
 try:
     from urllib.request import pathname2url
 except ImportError:
