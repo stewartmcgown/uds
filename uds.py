@@ -192,7 +192,7 @@ class UDS:
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
         # Append all chunks to chunk list
-        chunk_list = [Chunk(path, i, size, media=media, parent=parent['id']) for i in range(no_docs)]
+        chunk_list = [file_parts.Chunk(path, i, size, media=media, parent=parent['id']) for i in range(no_docs)]
 
         total = 0
         total_chunks = no_docs
@@ -286,11 +286,7 @@ class UDS:
             print('No UDS files found.')
         else:
             # print('\nUDS Files in Drive:')
-            table = []
-            for item in items:
-                record = [item.name, item.size,
-                          item.encoded_size, item.id_]
-                table.append(record)
+            table = [[item.name, item.size, item.encoded_size, item.id_] for item in items]
 
             print(tabulate(table, headers=[
                 'Name', 'Size', 'Encoded', 'ID', ]))
@@ -503,7 +499,7 @@ def ext_upload_chunked_part(chunk):
     _api = GoogleAPI()
     # print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
-    with open(chunk.path, "r") as fd:
+    with open(chunk.path) as fd:
         mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
         chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
