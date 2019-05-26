@@ -193,14 +193,10 @@ class UDS:
         no_docs = math.ceil(encoded_size / MAX_DOC_LENGTH)
 
         # Append all chunks to chunk list
-        chunk_list = list()
-        for i in range(no_docs):
-            chunk_list.append(
-                file_parts.Chunk(path, i, size, media=media, parent=parent['id'])
-            )
+        chunk_list = [Chunk(path, i, size, media=media, parent=parent['id']) for i in range(no_docs)]
 
         total = 0
-        total_chunks = len(chunk_list)
+        total_chunks = no_docs
         progress_bar_chunks = tqdm(total=total_chunks,
                                    unit='chunks', dynamic_ncols=True, position=0)
         progress_bar_speed = tqdm(total=total_chunks * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
@@ -221,7 +217,7 @@ class UDS:
         #             (total) / (elapsed_time * 1024 * 1024), 2)
         #         progress_bar("Uploading %s at %sMB/s" %
         #                   (media.name, current_speed), total, size)
-        # ""
+        #
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
         print(" \r")
@@ -430,25 +426,25 @@ def _parse_args():
                         nargs=2, help="Uploads files from this computer")
     parser.add_argument("--pull", metavar='id', nargs=1,
                         help="Downloads a UDS file")
-    parser.add_argument("--grab", metavar='name', nargs=1
+    parser.add_argument("-g", "--grab", metavar='name', nargs=1
                         ,help="Downloads a UDS file")
-    parser.add_argument("--batch", metavar='word_in_file', nargs=1,
+    parser.add_argument("-b", "--batch", metavar='word_in_file', nargs=1,
                         help="Downloads UDS files")
-    parser.add_argument("--list", metavar='query', nargs=1,
+    parser.add_argument("-l", "--list", metavar='query', nargs=1,
                         help="Finds all UDS files")
-    parser.add_argument("--update", action='store_true',
+    parser.add_argument("-u", "--update", action='store_true',
                         help="Update cached UDS data")
-    parser.add_argument("--delete", metavar='id', nargs=1,
+    parser.add_argument("-d", "--delete", metavar='id', nargs=1,
                         help="Deletes a UDS file")
-    parser.add_argument("--erase", metavar='name', nargs=1,
+    parser.add_argument("-e", "--erase", metavar='name', nargs=1,
                         help="Deletes a UDS file")
-    parser.add_argument("--wipe", metavar='word_in_file', nargs=1,
+    parser.add_argument("-w", "--wipe", metavar='word_in_file', nargs=1,
                         help="Deletes UDS files")
-    parser.add_argument("--convert", metavar='id', nargs=1,
+    parser.add_argument("-c", "--convert", metavar='id', nargs=1,
                         help="Converts UDS files")
-    parser.add_argument("--clear", action='store_true',
+    parser.add_argument("-C", "--clear", action='store_true',
                         help="Clear file after conversion")
-    parser.add_argument("--disable-multi", action='store_false',
+    parser.add_argument("-D", "--disable-multi", action='store_false',
                         help="Disable multithreading")
     return parser.parse_args()
     
