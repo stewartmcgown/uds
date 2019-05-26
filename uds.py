@@ -118,7 +118,7 @@ class UDS:
         f.close()
 
         original_hash = folder.get("md5Checksum")
-        if file_hash != original_hash and original_hash is not None:
+        if original_hash is not None and file_hash != original_hash:
             print("Failed to verify hash\nDownloaded file had hash {} compared to original {}".format(
                 file_hash, original_hash))
             os.remove(f.name)
@@ -146,7 +146,7 @@ class UDS:
         if not api:
             api = self.api
 
-        with open(chunk.path, "r") as fd:
+        with open(chunk.path) as fd:
             mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
             chunk_bytes = mm[chunk.range_start:chunk.range_end]
 
@@ -411,14 +411,14 @@ def write_status(status):
     sys.stdout.write("\r%s" % status)
     sys.stdout.flush()
 
-def _parse_args():
+def _parse_args(empty=False):
     """Parse command line arguments"""
     formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=52)
     parser = argparse.ArgumentParser(formatter_class=formatter)
     parser.add_argument("--push", metavar='path_to_file', nargs=1,
                         help="Uploads a file from this computer")
     parser.add_argument("--bunch", metavar=('word_in_file', 'path_to_file'),
-                        nargs=2, help="Uploads files from this computer")
+                        nargs='+', help="Uploads files from this computer")
     parser.add_argument("--pull", metavar='id', nargs=1,
                         help="Downloads a UDS file")
     parser.add_argument("-g", "--grab", metavar='name', nargs=1
@@ -441,6 +441,9 @@ def _parse_args():
                         help="Clear file after conversion")
     parser.add_argument("-D", "--disable-multi", action='store_false',
                         help="Disable multithreading")
+    if empty:
+        parser.print_help()
+        return None
     return parser.parse_args()
     
 def main():
@@ -452,6 +455,10 @@ def main():
     BASE_FOLDER = uds_root
 
     # Options
+    if len(sys.argv) < 2:
+        _parse_args(True)
+        sys.exit(1)
+    
     args = _parse_args()
 
     USE_MULTITHREADED_UPLOADS = args.disable_multi
