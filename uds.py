@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import argparse
 import hashlib
 import io
 import json
@@ -67,8 +68,6 @@ class UDS:
         except IOError:
             if mode_ != "quiet":
                 print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
-            else:
-                print("", end='')
 
     def build_file(self, parent_id):
         """Download a uds file
@@ -276,10 +275,6 @@ class UDS:
                     'Name', 'Encoded', 'Size', 'ID']))
             elif mode == 1:  # Notify
                 print("Data Updated!\n")
-            else:  # Silent Catch
-                print("", end='')
-        else:
-            print("", end='')
 
     def list(self, opts=None):
         """List UDS files
@@ -341,13 +336,9 @@ class UDS:
                     name_space.append(item.name)
                     id_space.append(item.id_)
                     check += 1
-                else:
-                    print("", end='')
             elif str(part) == "?":
                 name_space.append(item.name)
                 id_space.append(item.id_)
-            else:  # Fallback for doing nothing, not necessary, just habit
-                print("", end='')
         for i in range(check):
             self.grab(fallback=id_space[i], name=name_space[i], default=2)
         # Downloads the bulk using data and names
@@ -363,12 +354,8 @@ class UDS:
             if file_part != "?":
                 if file_part in name:  # Checks if part is in any files and adds to list
                     files_upload.append(name)
-                else:
-                    print("", end='')
             elif file_part == "?":
                 files_upload.append(name)
-            else:  # Fallback
-                print("", end='')
         for name_data in range(len(files_upload)):  # Upload all files put in list
             full_path = str(path) + "/" + str(files_upload[name_data])
             self.do_chunked_upload(full_path)
@@ -387,8 +374,6 @@ class UDS:
                     name_space.append(item.name)
                     check += 1
                     id_space.append(item.id_)
-                else:
-                    print("", end='')
             elif str(part) == "?":
                 name_space.append(item.name)
                 check += 1
@@ -435,7 +420,38 @@ def write_status(status):
     sys.stdout.write("\r%s" % status)
     sys.stdout.flush()
 
-
+def _parse_args():
+    """Parse command line arguments"""
+    formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=52))
+    parser = argparse.ArgumentParser(formatter_class=formatter)
+    parser.add_argument("--push", metavar='path_to_file', nargs=1,
+                        help="Uploads a file from this computer")
+    parser.add_argument("--bunch", metavar=('word_in_file', 'path_to_file'),
+                        nargs=2, help="Uploads files from this computer")
+    parser.add_argument("--pull", metavar='id', nargs=1,
+                        help="Downloads a UDS file")
+    parser.add_argument("--grab", metavar='name', nargs=1
+                        ,help="Downloads a UDS file")
+    parser.add_argument("--batch", metavar='word_in_file', nargs=1,
+                        help="Downloads UDS files")
+    parser.add_argument("--list", metavar='query', nargs=1,
+                        help="Finds all UDS files")
+    parser.add_argument("--update", action='store_true',
+                        help="Update cached UDS data")
+    parser.add_argument("--delete", metavar='id', nargs=1,
+                        help="Deletes a UDS file")
+    parser.add_argument("--erase", metavar='name', nargs=1,
+                        help="Deletes a UDS file")
+    parser.add_argument("--wipe", metavar='word_in_file', nargs=1,
+                        help="Deletes UDS files")
+    parser.add_argument("--convert", metavar='id', nargs=1,
+                        help="Converts UDS files")
+    parser.add_argument("--clear", action='store_true',
+                        help="Clear file after conversion")
+    parser.add_argument("--disable-multi", action='store_false',
+                        help="Disable multithreading")
+    return parser.parse_args()
+    
 def main():
     global BASE_FOLDER, USE_MULTITHREADED_UPLOADS, DELETE_FILE_AFTER_CONVERT
     uds = UDS()
@@ -445,76 +461,50 @@ def main():
     BASE_FOLDER = uds_root
 
     # Options
-    options = """
-    push     Uploads a file from this computer [path_to_file]
-    bunch    Uploads files from this computer [word_in_file] [path_to_file]
-    pull     Downloads a UDS file [id]
-    batch    Downloads UDS files [word_in_file]
-    grab     Downloads a UDS file [name]
-    list     Finds all UDS files [query]
-    update   Update cached UDS data
-    delete   Deletes a UDS file [id]
-    erase    Deletes a UDS file [name]
-    wipe     Deletes UDS files [word_in_file]
-    """
+    args = _parse_args()
 
-    if len(sys.argv) > 1:
-        command = str(sys.argv[1])
-        if command == "push":
-            if sys.argv[2] == "--disable-multi":
-                USE_MULTITHREADED_UPLOADS = False
-                file_path = sys.argv[3]
-            else:
-                file_path = sys.argv[2]
-            uds.do_chunked_upload(file_path)
-        elif command == "bunch":
-            if sys.argv[2] == "--disable-multi":
-                USE_MULTITHREADED_UPLOADS = False
-                if len(sys.argv) > 3:
-                    path = str(sys.argv[4])
-                    uds.bunch(sys.argv[3], path=path)
-                else:
-                    uds.bunch(sys.argv[3])
-            else:
-                if len(sys.argv) > 3:
-                    path = str(sys.argv[3])
-                    uds.bunch(sys.argv[2], path=path)
-                else:
-                    uds.bunch(sys.argv[2])
-        elif command == "pull":
-            uds.build_file(sys.argv[2])
-        elif command == "grab":
-            uds.grab(sys.argv[2])
-        elif command == "batch":
-            uds.batch(sys.argv[2])
-        elif command == "list":
-            arg = sys.argv[2] if len(sys.argv) > 2 else None
-            uds.list(arg)
-        elif command == "update":
-            uds.update()
-        elif command == "delete":
-            uds.delete_file(sys.argv[2])
-        elif command == "erase":
-            uds.erase(sys.argv[2])
-        elif command == "wipe":
-            uds.wipe(sys.argv[2])
-        elif command == "convert":
-            if sys.argv[2] == "--delete":
-                DELETE_FILE_AFTER_CONVERT = True
-                id = sys.argv[3]
-            else:
-                id = sys.argv[2]
-            convert_file(id)
+    USE_MULTITHREADED_UPLOADS = args.disable_multi
+
+    if args.push:
+        uds.do_chunked_upload(args.push[0])
+
+    if args.bunch:
+        if len(args.bunch) > 1:
+            uds.bunch(args.bunch[0], args.bunch[1])
         else:
-            print(options)
-    else:
-        print(options)
+            uds.bunch(args.bunch[0])
 
+    if args.pull:
+        uds.build_file(args.pull[0])
 
-# Upload a chunked part to drive and return the size of the chunk
+    if args.grab:
+        uds.grab(args.grab[0])
+
+    if args.batch:
+        uds.batch(args.batch[0])
+
+    if args.list:
+        uds.list(args.list[0])
+
+    if args.update:
+        uds.update()
+
+    if args.delete:
+        uds.delete_file(args.delete[0])
+
+    if args.erase:
+        uds.erase(args.erase[0])
+
+    if args.wipe:
+        uds.wipe(args.wipe[0])
+    
+    if args.convert:
+        DELETE_FILE_AFTER_CONVERT = args.clear
+        convert_file(args.convert[0])
 
 
 def ext_upload_chunked_part(chunk):
+    """Upload a chunked part to drive and return the size of the chunk"""
     _api = GoogleAPI()
     # print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
