@@ -1,11 +1,14 @@
+import sys
 import time
 
-from custom_exceptions import FileNotUDSError
-from file_parts import UDSFile
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from httplib2 import Http
 from oauth2client import file, client, tools
+
+from custom_exceptions import FileNotUDSError
+from file_parts import UDSFile
 
 
 class GoogleAPI:
@@ -25,11 +28,10 @@ class GoogleAPI:
                 flow = client.flow_from_clientsecrets(GoogleAPI.CLIENT_SECRET, SCOPES)
                 credentials = tools.run_flow(flow, store)
             except ConnectionRefusedError:
-                print("%s Make sure you've saved your OAuth credentials as %s" % (
-                    GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
-                print(
+                print("{!s} Make sure you've saved your OAuth credentials as {!s}".format(
+                      GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
+                sys.exit(
                     "If you've already done that, then run uds.py without any arguments first.")
-                exit()
 
         self.service = build('drive', 'v3', http=credentials.authorize(Http()))
         return self.service
@@ -48,12 +50,12 @@ class GoogleAPI:
             fields="nextPageToken, files(id, name, properties)").execute()
         folders = results.get('files', [])
 
-        if len(folders) == 0:
+        if not folders:
             return self.create_root_folder()
         elif len(folders) == 1:
             return folders[0]
         else:
-            print("%s Multiple UDS Roots found." % GoogleAPI.ERROR_OUTPUT)
+            print("{!s} Multiple UDS Roots found.".format(GoogleAPI.ERROR_OUTPUT))
 
     def create_root_folder(self):
         """Creates the base UDS folder and hides it from the user's drive
@@ -127,9 +129,8 @@ class GoogleAPI:
         items = results.get('files', [])
 
         files = []
-
         for f in items:
-            props = f.get("properties")
+            props = f.get("properties", {})
             files.append(UDSFile(
                 name=f.get("name"),
                 base64=None,
@@ -158,12 +159,12 @@ class GoogleAPI:
 
         while True:
             page_of_files = self.service.files().list(
-                q="parents in '%s'" % parent_id,
+                q="parents in {!r}".format(parent_id),
                 pageSize=100,
                 pageToken=token,
                 fields="nextPageToken, files(id, name, properties)").execute()
 
-            all_parts = all_parts + (page_of_files.get("files", []))
+            all_parts += page_of_files.get("files", [])
 
             token = page_of_files.get("nextPageToken")
 
@@ -191,9 +192,9 @@ class GoogleAPI:
             if info.get("properties").get("uds"):
                 return self.service.files().delete(fileId=id).execute()
             else:
-                raise (FileNotUDSError())
+                raise FileNotUDSError()
         except Exception:
-            raise (FileNotFoundError())
+            raise FileNotFoundError()
 
     def get_file(self, id):
         return self.service.files().get(fileId=id, fields="*").execute()
@@ -216,9 +217,8 @@ class GoogleAPI:
                 break
             except HttpError as e:
                 print('Failed to upload chunk {}. Retrying... '
-                      .format(file_metadata.get("properties").get("part")))
+                      .format(file_metadata.get("properties", {}).get("part")))
                 time.sleep(1)
-                continue
 
         return _file, file_metadata
 
