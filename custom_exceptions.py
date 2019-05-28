@@ -16,15 +16,14 @@ class Error(Exception):
         """
         try:
             if exception_has:
-                raise (instance(exception_has))
+                raise instance(exception_has)
             else:
-                raise (instance())
+                raise instance()
         except instance as err:
             print("\nFailed with: {}\n".format(type(err).__name__))
             print(err)
         finally:
-            print("")
-            sys.exit()
+            sys.exit("")
 
 
 class FileNotUDSError(Error):
