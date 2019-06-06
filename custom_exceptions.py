@@ -72,7 +72,7 @@ class NoClientSecretError(Error):
     """
 
     def __init__(self):
-        self.message = "No file named 'client_secret.json' in current working directory." \
+        self.message = "No file named 'client_secret.json' in current working directory. " \
                        "Ensure you've followed the installation instructions on GitHub."
 
     def __str__(self):
