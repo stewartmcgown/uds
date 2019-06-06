@@ -19,11 +19,12 @@ Development on a web-based JS version has started [here](https://github.com/stew
 - A single google doc can store about a million characters. This is around 710KB of base64 encoded data.
 - Some experiments with multi-threading the uploads, but there was no significant performance increase.
 
-## Authentication
+## Setup & Authentication
 
-1. Head to [Google's API page](https://developers.google.com/drive/api/v3/quickstart/python) and enable the Drive API
-2. Download the configuration file as 'client_secret.json' to the UDS directory
-3. run `python uds.py` for initial set up
+1. Clone the Repository and setup the requirements `pip3 install -r requirements.txt`
+2. Head to [Google's API page](https://developers.google.com/drive/api/v3/quickstart/python) and enable the Drive API
+3. Download the configuration file as 'client_secret.json' to the UDS directory
+4. run `python uds.py` for initial set up
 
 ## UDS Core
 
