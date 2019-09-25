@@ -4,21 +4,42 @@ import time
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from httplib2 import Http
+from httplib2 import Http, ProxyInfo, socks, proxy_info_from_url
 from oauth2client import file, client, tools
 
 from custom_exceptions import FileNotUDSError
 from file_parts import UDSFile
+from urllib import parse
 
 
 class GoogleAPI:
     ERROR_OUTPUT = "[ERROR]"
     CLIENT_SECRET = 'client_secret.json'
 
-    def __init__(self):
-        self.reauth()
+    def __init__(self,proxy=None):
+        if proxy:
+            self.reauth(proxy)
+        else:
+            self.reauth()
 
-    def reauth(self):
+    def reauth(self,proxy=None):
+        # Setting Proxy
+        if proxy:
+            proxy_part = parse.urlparse(proxy)
+            method = socks.PROXY_TYPE_SOCKS5
+            if proxy_part.scheme == 'socks5':
+                method = socks.PROXY_TYPE_SOCKS5
+            elif proxy_part.scheme == 'http':
+                method = socks.PROXY_TYPE_HTTP
+            elif proxy_part.scheme == 'socks4':
+                method = socks.PROXY_TYPE_SOCKS4
+            proxy_info=ProxyInfo(method, proxy_part.hostname, proxy_part.port,
+                proxy_user = proxy_part.username,
+                proxy_pass = proxy_part.password
+            )
+            httpclient = Http(proxy_info=proxy_info)
+        else:
+            httpclient = Http()    
         # Set up the Drive v3 API
         SCOPES = ["https://www.googleapis.com/auth/drive"]
         store = file.Storage('credentials.json')
@@ -26,14 +47,14 @@ class GoogleAPI:
         if not credentials or credentials.invalid:
             try:
                 flow = client.flow_from_clientsecrets(GoogleAPI.CLIENT_SECRET, SCOPES)
-                credentials = tools.run_flow(flow, store)
+                credentials = tools.run_flow(flow, store,http=httpclient)
             except ConnectionRefusedError:
                 print("{!s} Make sure you've saved your OAuth credentials as {!s}".format(
                       GoogleAPI.ERROR_OUTPUT, GoogleAPI.CLIENT_SECRET))
                 sys.exit(
                     "If you've already done that, then run uds.py without any arguments first.")
 
-        self.service = build('drive', 'v3', http=credentials.authorize(Http()))
+        self.service = build('drive', 'v3', http=credentials.authorize(httpclient))
         return self.service
 
     def get_base_folder(self):

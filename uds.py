@@ -40,10 +40,11 @@ MAX_RAM_MB = 1024
 MAX_WORKERS_ALLOWED = 10
 CHUNK_READ_LENGTH_BYTES = 750000
 
+PROXY = None
 
 class UDS:
     def __init__(self):
-        self.api = GoogleAPI()
+        self.api = GoogleAPI(PROXY)
 
     def delete_file(self, id, name=None, mode_=None):
         """Deletes a given file
@@ -442,18 +443,15 @@ def _parse_args(empty=False):
                         help="Clear file after conversion")
     parser.add_argument("-D", "--disable-multi", action='store_false',
                         help="Disable multithreading")
+    parser.add_argument("-p", "--proxy", metavar='proxy_url',
+            nargs=1 ,help="Using proxy")
     if empty:
         parser.print_help()
         return None
     return parser.parse_args()
     
 def main():
-    global BASE_FOLDER, USE_MULTITHREADED_UPLOADS, DELETE_FILE_AFTER_CONVERT
-    uds = UDS()
-
-    # Initial look for folder and first time setup if not
-    uds_root = uds.api.get_base_folder()
-    BASE_FOLDER = uds_root
+    global BASE_FOLDER, USE_MULTITHREADED_UPLOADS, DELETE_FILE_AFTER_CONVERT,PROXY
 
     # Options
     if len(sys.argv) < 2:
@@ -463,7 +461,14 @@ def main():
     args = _parse_args()
 
     USE_MULTITHREADED_UPLOADS = args.disable_multi
+    if args.proxy:
+        PROXY = args.proxy[0]
 
+    uds = UDS()
+    # Initial look for folder and first time setup if not
+    uds_root = uds.api.get_base_folder()
+    BASE_FOLDER = uds_root
+    
     if args.push:
         uds.do_chunked_upload(args.push[0])
 
@@ -504,7 +509,7 @@ def main():
 
 def ext_upload_chunked_part(chunk):
     """Upload a chunked part to drive and return the size of the chunk"""
-    _api = GoogleAPI()
+    _api = GoogleAPI(PROXY)
     # print("Chunk %s, bytes %s to %s" % (chunk.part, chunk.range_start, chunk.range_end))
 
     with open(chunk.path) as fd:
