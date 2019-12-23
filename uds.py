@@ -118,7 +118,7 @@ class UDS:
 
         f.close()
 
-        original_hash = folder.get("md5Checksum")
+        original_hash = folder.get("properties", {}).get("md5")
         if original_hash is not None and file_hash != original_hash:
             print("Failed to verify hash\nDownloaded file had hash {} compared to original {}".format(
                 file_hash, original_hash))
