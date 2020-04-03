@@ -67,7 +67,7 @@ class UDS:
                 print("Deleted %s" % id)
         except IOError:
             if mode_ != "quiet":
-                print("%s File was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
+                print("File \"%s\" was not a UDS file" % GoogleAPI.ERROR_OUTPUT)
 
     def build_file(self, parent_id):
         """Download a uds file
@@ -112,7 +112,7 @@ class UDS:
             # Append decoded part to file
             f.write(decoded_part)
 
-        print(" \r")
+        print()
 
         file_hash = self.hash_file(f.name)
 
@@ -220,7 +220,7 @@ class UDS:
         #
         # Print new file output
         table = [[media.name, media.size, media.encoded_size, parent['id']]]
-        print(" \r")
+        print()
         print("\n" + tabulate(table, headers=[
             'Name', 'Size', 'Encoded', 'ID', ]))
 
@@ -248,7 +248,7 @@ class UDS:
     def update(self, mode=0, opts=None):
         items = self.api.list_files(opts)
         if not items:
-            print('No UDS files found.')
+            print('No UDS files were found.')
         elif mode != 2:  # Duplicate silent...
             table = []
             with open("data.txt", 'w') as init:  # Create data.txt if it does not exist
@@ -284,7 +284,7 @@ class UDS:
         items = self.api.list_files(opts)
 
         if not items:
-            print('No UDS files found.')
+            print('No UDS files were found.')
         else:
             # print('\nUDS Files in Drive:')
             table = [[item.name, item.size, item.encoded_size, item.id_] for item in items]
@@ -308,13 +308,13 @@ class UDS:
         self.update(mode=default)  # Sets update mode
         if fallback is not None:
             self.build_file(parent_id=fallback)
-            print("\n")
+            print()
         else:
             with open("data.txt", 'r') as list_:  # Load ID values based on file name
                 data_pull = json.load(list_)
             parent_id = data_pull[name]  # Loads ID based on name
             self.build_file(parent_id)
-            print("\n")
+            print()
 
     def batch(self, part, opts=None):  # Alpha command to bulk download based on part of a file name
         self.update(mode=1)  # Sets update mode
@@ -351,7 +351,7 @@ class UDS:
         for name_data in range(len(files_upload)):  # Upload all files put in list
             full_path = str(path) + "/" + str(files_upload[name_data])
             self.do_chunked_upload(full_path)
-        print("\n")
+        print()
         self.update(mode=1)  # Necessary update to data
 
     def wipe(self, part, opts=None):  # Alpha command to bulk delete files based on file name part
@@ -371,7 +371,7 @@ class UDS:
                 check += 1
                 id_space.append(item.id_)
             else:
-                print("")
+                print()
         for i in range(check):
             self.erase(fallback=id_space[i], name=name_space[i], default=2)
 
