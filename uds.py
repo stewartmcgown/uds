@@ -426,7 +426,7 @@ def _parse_args(empty=False):
                         ,help="Downloads a UDS file")
     parser.add_argument("-b", "--batch", metavar='word_in_file', nargs=1,
                         help="Downloads UDS files")
-    parser.add_argument("-l", "--list", metavar='query', nargs=1,
+    parser.add_argument("-l", "--list", metavar='query', const='', nargs='?',
                         help="Finds all UDS files")
     parser.add_argument("-u", "--update", action='store_true',
                         help="Update cached UDS data")
@@ -482,8 +482,9 @@ def main():
     if args.batch:
         uds.batch(args.batch[0])
 
-    if args.list:
-        uds.list(args.list[0])
+    if args.list != None:
+        # to differentiate from case of '' where no query is provided
+        uds.list(args.list)
 
     if args.update:
         uds.update()
