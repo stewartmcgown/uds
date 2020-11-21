@@ -27,7 +27,7 @@ try:
 except ImportError:
     Error.formatter(PythonVersionError, ".".join(str(v) for v in sys.version_info[:2]))
 
-if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
+if not os.path.exists(os.path.join(os.getcwd(), "client_secret.json")):
     Error.formatter(NoClientSecretError)
 
 DOWNLOADS_FOLDER = "downloads"

@@ -5,10 +5,12 @@ import time
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from httplib2 import Http
-from oauth2client import file, client, tools
+
 
 from custom_exceptions import FileNotUDSError
 from file_parts import UDSFile
+from oauth2client import file, client, tools
+
 
 
 class GoogleAPI:
