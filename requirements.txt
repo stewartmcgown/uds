@@ -1,5 +1,5 @@
 tabulate==0.8.2
-httplib2==0.11.3
+httplib2==0.18.0
 cryptography==3.2
 google_api_python_client==1.7.5
 oauth2client==4.1.3
