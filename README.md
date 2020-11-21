@@ -6,6 +6,8 @@ sorry @ the guys from google internal forums who are looking at this
 
 Development on a web-based JS version has started [here](https://github.com/stewartmcgown/uds-web).
 
+> Note: After June 1st 2021, starting June 1, 2021, Google will count Docs, Sheets, Slides, Drawings, Forms and Jamboard files against the user's storage quota.
+
 ## Features
 
 - Upload files to Google Drive without using storage space
