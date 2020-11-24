@@ -51,7 +51,7 @@ argument: Path_to_file+file_name
 ```sh
 > ./uds.py --list
 Name                      Size   Encoded    ID
-------------------------  -----  ---------  ---------------------------------  
+------------------------  -----  ---------  ---------------------------------
 Ubuntu.Desktop.16.04.iso  810 MB  1.1 GB    1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 Ubuntu.Desktop.18.10.iso  1.1 GB  1.3 GB    1RzzVfN9goHMTkM1Hf1FUWUVS_2R3GK7D
 
@@ -59,7 +59,7 @@ Also supports searching with a query!
 
 > ./uds.py --list "18"
 Name                      Size   Encoded    ID
-------------------------  -----  ---------  ---------------------------------  
+------------------------  -----  ---------  ---------------------------------
 Ubuntu.Desktop.18.10.iso  1.1 GB  1.3 GB    1RzzVfN9goHMTkM1Hf1FUWUVS_2R3GK7D
 ```
 
@@ -97,8 +97,8 @@ Deleted 1fc6JGpX6vUWiwflL1jBxM1YpuMHFAms8
 
 argument: id_of_file
 ```
-## Alpha Extensions
 
+## Alpha Extensions
 
 ### Grab
 
@@ -135,14 +135,14 @@ argument: name_of_file
 ```sh
 > ./uds.py --update
 
-Name       Encoded   Size 
+Name       Encoded   Size
 ---------  --------  -----
-file_name  1.1 GB    810 MB 
+file_name  1.1 GB    810 MB
 
 "User.txt"
-Name       Encoded   Size 
+Name       Encoded   Size
 ---------  --------  -----
-file_name  1.1 GB    810 MB 
+file_name  1.1 GB    810 MB
 
 "data.txt"
 {
@@ -182,7 +182,6 @@ Successfully Uploaded test.7z.3: [███████████████�
 argument[1]: name_in_files, or wildcard "?" without quotes
 argument[2]: directory, default is current directory of UDS
 ```
-
 
 ### Batch
 
