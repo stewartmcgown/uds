@@ -30,7 +30,7 @@ except ImportError:
 if not os.path.exists(os.path.join(os.getcwd() + "/client_secret.json")):
     Error.formatter(NoClientSecretError)
 
-DOWNLOADS_FOLDER = "downloads"
+DOWNLOADS_FOLDER = str(os.path.join(str(os.getcwd()), "downloads"))
 TEMP_FOLDER = "tmp"
 
 USE_MULTITHREADED_UPLOADS = True
@@ -39,7 +39,6 @@ MAX_DOC_LENGTH = 1000000
 MAX_RAM_MB = 1024
 MAX_WORKERS_ALLOWED = 10
 CHUNK_READ_LENGTH_BYTES = 750000
-
 
 class UDS:
     def __init__(self):
@@ -81,6 +80,7 @@ class UDS:
             :return:
             :param parent_id:
          """
+        
         items = self.api.recursive_list_folder(parent_id)
 
         folder = self.api.get_file(parent_id)
@@ -94,8 +94,11 @@ class UDS:
             item['properties']['part'] = int(item['properties']['part'])
 
         items.sort(key=lambda x: x['properties']['part'], reverse=False)
-
-        f = open("%s/%s" % (get_downloads_folder(), folder['name']), "a+b")
+        count = len(str(folder['name']))
+        count -= 1
+        while not str(folder['name'])[count] == "/" and not str(folder['name'])[count] == "\\":
+          count -= 1
+        f = open(str(get_downloads_folder()) + str(folder['name'])[count:len(str(folder['name']))], "a+b")
         progress_bar_chunks = tqdm(total=len(items),
                                    unit='chunks', dynamic_ncols=True, position=0)
         progress_bar_speed = tqdm(total=len(items) * CHUNK_READ_LENGTH_BYTES, unit_scale=1,
@@ -154,7 +157,7 @@ class UDS:
         encoded_chunk = encoder.encode(chunk_bytes)
 
         file_metadata = {
-            'name': chunk.media.name + str(chunk.part),
+            'name': chunk.path + str(chunk.part),
             'mimeType': 'application/vnd.google-apps.document',
             'parents': [chunk.parent],
             'properties': {
@@ -182,7 +185,7 @@ class UDS:
 
         root = self.api.get_base_folder()['id']
 
-        media = file_parts.UDSFile(ntpath.basename(path), None,
+        media = file_parts.UDSFile(path, None,
                                    MimeTypes().guess_type(pathname2url(path))[0],
                                    formatter(size), formatter(encoded_size), parents=[root], size_numeric=size,
                                    md5=file_hash)
@@ -230,7 +233,7 @@ class UDS:
 
         # Download the file and then call do_upload() on it
         request = service.files().get_media(fileId=file_id)
-        path = "%s/%s" % (get_downloads_folder(), metadata['name'])
+        path = str(get_downloads_folder()) + str(metadata['name'])
         fh = io.FileIO(path, "wb")
         downloader = MediaIoBaseDownload(fh, request)
         done = False
@@ -340,16 +343,17 @@ class UDS:
 
     # Alpha command to bulk upload files based on file name part
     def bunch(self, file_part, path='.'):
-        files = os.listdir(path)  # Make list of all files in directory
+        filesr = os.walk(path)  # Make list of all files in directory
         files_upload = []
-        for name in files:  # Cycles through all files
+        for root, dirs, files in filesr:  
+          for name in files:  # Cycles through all files
             if file_part != "?":
                 if file_part in name:  # Checks if part is in any files and adds to list
-                    files_upload.append(name)
+                    files_upload.append(str(os.path.join(root, name)))
             elif file_part == "?":
-                files_upload.append(name)
+                files_upload.append(str(os.path.join(root, name)))
         for name_data in range(len(files_upload)):  # Upload all files put in list
-            full_path = str(path) + "/" + str(files_upload[name_data])
+            full_path = str(files_upload[name_data])
             self.do_chunked_upload(full_path)
         print()
         self.update(mode=1)  # Necessary update to data
@@ -515,7 +519,7 @@ def ext_upload_chunked_part(chunk):
     encoded_chunk = encoder.encode(chunk_bytes)
 
     file_metadata = {
-        'name': chunk.media.name + str(chunk.part),
+        'name': str(chunk.path) + str(chunk.part),
         'mimeType': 'application/vnd.google-apps.document',
         'parents': [chunk.parent],
         'properties': {
