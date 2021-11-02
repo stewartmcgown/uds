@@ -348,8 +348,8 @@ class UDS:
                     files_upload.append(name)
             elif file_part == "?":
                 files_upload.append(name)
-        for name_data in range(len(files_upload)):  # Upload all files put in list
-            full_path = str(path) + "/" + str(files_upload[name_data])
+        for _, file in enumerate(files_upload):  # Upload all files put in list
+            full_path = str(path) + "/" + str(file)
             self.do_chunked_upload(full_path)
         print()
         self.update(mode=1)  # Necessary update to data
